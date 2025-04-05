@@ -2,10 +2,8 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:local="clr-namespace:EPGVirtualization">
 
-    <!-- Converter to create a Thickness from TimelineHeight -->
+    <!-- Existing converters -->
     <local:TimelineHeightToMarginConverter x:Key="TimelineHeightToMarginConverter"/>
-
-    <!-- Converters -->
     <local:ProgramBackgroundConverter x:Key="ProgramBackgroundConverter"/>
 
     <!-- Default Template for EPGCanvas -->
@@ -26,26 +24,25 @@
                         <!-- Header corner -->
                         <Border Grid.Row="0" Grid.Column="0" Background="LightGray" />
 
-                        <!-- Main ScrollViewer that contains both program grid and timeline -->
+                        <!-- Main ScrollViewer that contains program grid -->
                         <ScrollViewer x:Name="PART_MainScrollViewer" 
                                       Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
                                       HorizontalScrollBarVisibility="Auto"
                                       VerticalScrollBarVisibility="Auto">
                             <Grid>
-                                <!-- Timeline at the top -->
+                                <!-- Timeline - now positioned absolutely to prevent scrolling -->
                                 <Canvas x:Name="PART_TimelineCanvas" 
                                         Height="{Binding TimelineHeight, RelativeSource={RelativeSource TemplatedParent}}"
                                         Background="LightGray"
-                                        VerticalAlignment="Top" />
+                                        VerticalAlignment="Top"
+                                        HorizontalAlignment="Left"
+                                        IsHitTestVisible="False"  
+                                        Focusable="False"/>
 
                                 <!-- Program grid below the timeline -->
                                 <Canvas x:Name="PART_ProgramGrid" 
-                                        Background="WhiteSmoke">
-                                    <Canvas.Margin>
-                                        <Thickness Top="40" 
-                                                   Left="0" Right="0" Bottom="0"/>
-                                    </Canvas.Margin>
-                                </Canvas>
+                                        Background="WhiteSmoke"
+                                        Margin="0,40,0,0"/>
                             </Grid>
                         </ScrollViewer>
 
@@ -62,7 +59,7 @@
         </Setter>
     </Style>
 
-    <!-- Style for program items -->
+    <!-- Existing program control style remains the same -->
     <Style TargetType="{x:Type local:ProgramControl}">
         <Setter Property="Template">
             <Setter.Value>

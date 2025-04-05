@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Shane\\source\\repos\\EPGVirtualization\\EPGVirtualization.csproj": {}
+    "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\EPGVirtualization.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Shane\\source\\repos\\EPGVirtualization\\EPGVirtualization.csproj": {
+    "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\EPGVirtualization.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Shane\\source\\repos\\EPGVirtualization\\EPGVirtualization.csproj",
+        "projectUniqueName": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\EPGVirtualization.csproj",
         "projectName": "EPGVirtualization",
-        "projectPath": "C:\\Users\\Shane\\source\\repos\\EPGVirtualization\\EPGVirtualization.csproj",
+        "projectPath": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\EPGVirtualization.csproj",
         "packagesPath": "C:\\Users\\Shane\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Shane\\source\\repos\\EPGVirtualization\\obj\\",
+        "outputPath": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

@@ -188,7 +188,6 @@ namespace EPGVirtualization
                     {
                         channelScrollViewer.ScrollToVerticalOffset(_verticalOffset);
                     }
-
                     // Update program visibility
                     UpdateVisibility();
                 };
@@ -604,8 +603,9 @@ namespace EPGVirtualization
         {
             if (_timelineCanvas != null)
             {
-                Trace.WriteLine($"HorizontalOffset: {_horizontalOffset}");
-                Canvas.SetLeft(_timelineCanvas, - _horizontalOffset + ChannelLabelWidth);
+                // Always reset the timeline to the top-left corner relative to the horizontal scroll
+                Canvas.SetLeft(_timelineCanvas, -_horizontalOffset);
+                Canvas.SetTop(_timelineCanvas, 0); // Explicitly set top to 0
             }
         }
         private void UpdateChannelListPosition()
