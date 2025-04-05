@@ -1,0 +1,89 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:EPGVirtualization">
+
+    <!-- Converter to create a Thickness from TimelineHeight -->
+    <local:TimelineHeightToMarginConverter x:Key="TimelineHeightToMarginConverter"/>
+
+    <!-- Converters -->
+    <local:ProgramBackgroundConverter x:Key="ProgramBackgroundConverter"/>
+
+    <!-- Default Template for EPGCanvas -->
+    <Style TargetType="{x:Type local:EPGCanvas}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:EPGCanvas}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="{Binding TimelineHeight, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{Binding ChannelLabelWidth, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Header corner -->
+                        <Border Grid.Row="0" Grid.Column="0" Background="LightGray" />
+
+                        <!-- Main ScrollViewer that contains both program grid and timeline -->
+                        <ScrollViewer x:Name="PART_MainScrollViewer" 
+                                      Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Auto">
+                            <Grid>
+                                <!-- Timeline at the top -->
+                                <Canvas x:Name="PART_TimelineCanvas" 
+                                        Height="{Binding TimelineHeight, RelativeSource={RelativeSource TemplatedParent}}"
+                                        Background="LightGray"
+                                        VerticalAlignment="Top" />
+
+                                <!-- Program grid below the timeline -->
+                                <Canvas x:Name="PART_ProgramGrid" 
+                                        Background="WhiteSmoke">
+                                    <Canvas.Margin>
+                                        <Thickness Top="40" 
+                                                   Left="0" Right="0" Bottom="0"/>
+                                    </Canvas.Margin>
+                                </Canvas>
+                            </Grid>
+                        </ScrollViewer>
+
+                        <!-- Channel scrollviewer - vertical scroll will be synced in code -->
+                        <ScrollViewer x:Name="PART_ChannelScrollViewer"
+                                      Grid.Row="1" Grid.Column="0" 
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Hidden">
+                            <StackPanel x:Name="PART_ChannelPanel" Background="LightGray" />
+                        </ScrollViewer>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Style for program items -->
+    <Style TargetType="{x:Type local:ProgramControl}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:ProgramControl}">
+                    <Border x:Name="Border" 
+                            CornerRadius="2"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            Background="{Binding IsSelected, Converter={StaticResource ProgramBackgroundConverter}}">
+                        <StackPanel Margin="2">
+                            <TextBlock Text="{Binding Title}" 
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding StartTime, StringFormat=\{0:HH:mm\}}"
+                                       FontSize="10"
+                                       Foreground="DarkGray" />
+                        </StackPanel>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>
