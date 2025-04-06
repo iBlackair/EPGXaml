@@ -11,7 +11,11 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type local:EPGCanvas}">
-                    <Grid>
+                    <!-- Set RenderOptions at the template level -->
+                    <Grid SnapsToDevicePixels="True" 
+                          UseLayoutRounding="True" 
+                          RenderOptions.EdgeMode="Aliased"
+                          RenderOptions.BitmapScalingMode="NearestNeighbor">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="{Binding TimelineHeight, RelativeSource={RelativeSource TemplatedParent}}" />
                             <RowDefinition Height="*" />
@@ -21,61 +25,109 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
+                        <!-- Create a single border grid to ensure perfect alignment -->
+                        <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Grid.ColumnSpan="2"
+                                BorderBrush="Gray"
+                                BorderThickness="0"
+                                Background="Transparent"
+                                SnapsToDevicePixels="True" />
+
                         <!-- Header corner -->
-                        <Border Grid.Row="0" Grid.Column="0" Background="LightGray" />
+                        <Border Grid.Row="0" Grid.Column="0" 
+                                Background="LightGray"
+                                SnapsToDevicePixels="True" />
 
-                        <!-- Main ScrollViewer that contains program grid -->
-                        <ScrollViewer x:Name="PART_MainScrollViewer" 
-                                      Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
-                                      HorizontalScrollBarVisibility="Auto"
-                                      VerticalScrollBarVisibility="Auto">
-                            <Grid>
-                                <!-- Timeline - now positioned absolutely to prevent scrolling -->
-                                <Canvas x:Name="PART_TimelineCanvas" 
-                                        Height="{Binding TimelineHeight, RelativeSource={RelativeSource TemplatedParent}}"
-                                        Background="LightGray"
-                                        VerticalAlignment="Top"
-                                        HorizontalAlignment="Left"
-                                        IsHitTestVisible="False"  
-                                        Focusable="False"/>
-
-                                <!-- Program grid below the timeline -->
-                                <Canvas x:Name="PART_ProgramGrid" 
-                                        Background="WhiteSmoke"
-                                        Margin="0,40,0,0"/>
-                            </Grid>
+                        <!-- Timeline - fixed at the top -->
+                        <ScrollViewer Grid.Row="0" Grid.Column="1" 
+                                     HorizontalScrollBarVisibility="Hidden"
+                                     VerticalScrollBarVisibility="Disabled"
+                                     Padding="0"
+                                     Margin="0"
+                                     SnapsToDevicePixels="True"
+                                     RenderOptions.EdgeMode="Aliased"
+                                     x:Name="PART_TimelineScrollViewer">
+                            <Canvas x:Name="PART_TimelineCanvas" 
+                                    Height="{Binding TimelineHeight, RelativeSource={RelativeSource TemplatedParent}}"
+                                    Background="LightGray"
+                                    VerticalAlignment="Top"
+                                    HorizontalAlignment="Left"
+                                    SnapsToDevicePixels="True"/>
                         </ScrollViewer>
 
-                        <!-- Channel scrollviewer - vertical scroll will be synced in code -->
+                        <!-- Channel scrollviewer -->
                         <ScrollViewer x:Name="PART_ChannelScrollViewer"
                                       Grid.Row="1" Grid.Column="0" 
                                       HorizontalScrollBarVisibility="Disabled"
-                                      VerticalScrollBarVisibility="Hidden">
-                            <StackPanel x:Name="PART_ChannelPanel" Background="LightGray" />
+                                      VerticalScrollBarVisibility="Hidden"
+                                      Padding="0"
+                                      Margin="0"
+                                      SnapsToDevicePixels="True"
+                                      RenderOptions.EdgeMode="Aliased">
+                            <StackPanel x:Name="PART_ChannelPanel" 
+                                       Background="LightGray" 
+                                       SnapsToDevicePixels="True" />
                         </ScrollViewer>
+
+                        <!-- Main ScrollViewer that contains program grid -->
+                        <ScrollViewer x:Name="PART_MainScrollViewer" 
+                                      Grid.Row="1" Grid.Column="1"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Auto"
+                                      Padding="0"
+                                      Margin="0"
+                                      SnapsToDevicePixels="True"
+                                      RenderOptions.EdgeMode="Aliased">
+                            <!-- Program grid -->
+                            <Canvas x:Name="PART_ProgramGrid" 
+                                    Background="WhiteSmoke"
+                                    SnapsToDevicePixels="True"/>
+                        </ScrollViewer>
+
+                        <!-- Explicit grid lines for perfect corners -->
+                        <!-- Horizontal line between timeline and content -->
+                        <Rectangle Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                                   Height="1"
+                                   Fill="Gray"
+                                   VerticalAlignment="Bottom"
+                                   HorizontalAlignment="Stretch"
+                                   SnapsToDevicePixels="True"
+                                   RenderOptions.EdgeMode="Aliased"/>
+
+                        <!-- Vertical line between channels and content -->
+                        <Rectangle Grid.Row="0" Grid.Column="0" Grid.RowSpan="2"
+                                   Width="1"
+                                   Fill="Gray"
+                                   VerticalAlignment="Stretch"
+                                   HorizontalAlignment="Right"
+                                   SnapsToDevicePixels="True"
+                                   RenderOptions.EdgeMode="Aliased"/>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
-    <!-- Existing program control style remains the same -->
+    <!-- Style for program control with updated rendering settings -->
     <Style TargetType="{x:Type local:ProgramControl}">
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="RenderOptions.EdgeMode" Value="Aliased"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type local:ProgramControl}">
                     <Border x:Name="Border" 
-                            CornerRadius="2"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            Background="{Binding IsSelected, Converter={StaticResource ProgramBackgroundConverter}}">
+                        CornerRadius="0"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        Background="{Binding IsSelected, Converter={StaticResource ProgramBackgroundConverter}, ConverterParameter={Binding}}"
+                        SnapsToDevicePixels="True"
+                        RenderOptions.EdgeMode="Aliased">
                         <StackPanel Margin="2">
                             <TextBlock Text="{Binding Title}" 
-                                       FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis" />
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{Binding StartTime, StringFormat=\{0:HH:mm\}}"
-                                       FontSize="10"
-                                       Foreground="DarkGray" />
+                                   FontSize="10"
+                                   Foreground="DarkGray" />
                         </StackPanel>
                     </Border>
                 </ControlTemplate>
