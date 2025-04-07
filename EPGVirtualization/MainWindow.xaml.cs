@@ -13,7 +13,6 @@ namespace EPGVirtualization
 
             // Generate sample data
             var programs = GenerateSamplePrograms();
-
             // Set the data for our EPG control
             EPGControl.SetPrograms(programs);
 
@@ -35,10 +34,10 @@ namespace EPGVirtualization
             // Generate programs across 20 channels for 24 hours
             for (int channelIndex = 0; channelIndex < 40; channelIndex++)
             {
-                DateTime currentTime = DateTime.Today;
+                DateTime currentTime = DateTime.Parse("2025/4/1 12:00:00"); ;
 
                 // Add programs until we fill the 24-hour period
-                while (currentTime < DateTime.Today.AddDays(1))
+                while (currentTime < DateTime.Today.AddDays(13))
                 {
                     // Random duration between 15 and 120 minutes, in 15-minute increments
                     int durationMinutes = random.Next(1, 8) * 15;

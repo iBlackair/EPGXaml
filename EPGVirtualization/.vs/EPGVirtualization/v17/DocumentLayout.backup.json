@@ -7,24 +7,32 @@
       "RelativeMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|solutionrelative:mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|c:\\users\\shane\\documents\\github\\epgxaml\\epgvirtualization\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|solutionrelative:mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|c:\\users\\shane\\documents\\github\\epgxaml\\epgvirtualization\\controls\\epgvirtualizingpanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|solutionrelative:controls\\epgvirtualizingpanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|c:\\users\\shane\\documents\\github\\epgxaml\\epgvirtualization\\models\\programinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|solutionrelative:models\\programinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|c:\\users\\shane\\documents\\github\\epgxaml\\epgvirtualization\\controls\\programcontrol.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|solutionrelative:controls\\programcontrol.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|c:\\users\\shane\\documents\\github\\epgxaml\\epgvirtualization\\converters\\converter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|solutionrelative:converters\\converter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|c:\\users\\shane\\documents\\github\\epgxaml\\epgvirtualization\\epgcanvastemplate.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
       "RelativeMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|solutionrelative:epgcanvastemplate.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|c:\\users\\shane\\documents\\github\\epgxaml\\epgvirtualization\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
-      "RelativeMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|solutionrelative:mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|c:\\users\\shane\\documents\\github\\epgxaml\\epgvirtualization\\epgvirtualization.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|solutionrelative:epgvirtualization.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|c:\\users\\shane\\documents\\github\\epgxaml\\epgvirtualization\\models\\programinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|solutionrelative:models\\programinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{8596A7CB-DFD3-4BEC-B537-07FD3D5C0734}|EPGVirtualization.csproj|c:\\users\\shane\\documents\\github\\epgxaml\\epgvirtualization\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
@@ -41,7 +49,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 257,
-          "SelectedChildIndex": 10,
+          "SelectedChildIndex": 12,
           "Children": [
             {
               "$type": "Bookmark",
@@ -58,19 +66,53 @@
             {
               "$type": "Document",
               "DocumentIndex": 4,
-              "Title": "EPGVirtualization",
-              "DocumentMoniker": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\EPGVirtualization.csproj",
-              "RelativeDocumentMoniker": "EPGVirtualization.csproj",
-              "ToolTip": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\EPGVirtualization.csproj",
-              "RelativeToolTip": "EPGVirtualization.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-04-06T07:30:41.627Z",
-              "EditorCaption": ""
+              "Title": "ProgramControl.cs",
+              "DocumentMoniker": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\Controls\\ProgramControl.cs",
+              "RelativeDocumentMoniker": "Controls\\ProgramControl.cs",
+              "ToolTip": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\Controls\\ProgramControl.cs",
+              "RelativeToolTip": "Controls\\ProgramControl.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-04-06T13:07:09.805Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "Converter.cs",
+              "DocumentMoniker": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\Converters\\Converter.cs",
+              "RelativeDocumentMoniker": "Converters\\Converter.cs",
+              "ToolTip": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\Converters\\Converter.cs",
+              "RelativeToolTip": "Converters\\Converter.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-04-06T13:02:40.301Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "MainWindow.xaml",
+              "DocumentMoniker": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\MainWindow.xaml",
+              "RelativeDocumentMoniker": "MainWindow.xaml",
+              "ToolTip": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\MainWindow.xaml",
+              "RelativeToolTip": "MainWindow.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2025-04-06T12:55:05.593Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 7,
+              "Title": "EPGVirtualization.csproj",
+              "DocumentMoniker": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\EPGVirtualization.csproj",
+              "RelativeDocumentMoniker": "EPGVirtualization.csproj",
+              "ToolTip": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\EPGVirtualization.csproj",
+              "RelativeToolTip": "EPGVirtualization.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2025-04-06T07:30:41.627Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
               "Title": "XamlReader.cs",
               "DocumentMoniker": "C:\\Users\\Shane\\AppData\\Local\\Temp\\.vsdbgsrc\\0a84cc53936b314ba955b54f50bf4796d8234943f3fd7b93873381b45d404026\\XamlReader.cs",
               "RelativeDocumentMoniker": "..\\..\\..\\..\\AppData\\Local\\Temp\\.vsdbgsrc\\0a84cc53936b314ba955b54f50bf4796d8234943f3fd7b93873381b45d404026\\XamlReader.cs",
@@ -83,65 +125,49 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 6,
               "Title": "EPGCanvasTemplate.xaml",
               "DocumentMoniker": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\EPGCanvasTemplate.xaml",
               "RelativeDocumentMoniker": "EPGCanvasTemplate.xaml",
               "ToolTip": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\EPGCanvasTemplate.xaml",
               "RelativeToolTip": "EPGCanvasTemplate.xaml",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
-              "WhenOpened": "2025-04-05T18:20:03.058Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-05T18:20:03.058Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 8,
               "Title": "App.xaml",
               "DocumentMoniker": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\App.xaml",
               "RelativeDocumentMoniker": "App.xaml",
               "ToolTip": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\App.xaml",
               "RelativeToolTip": "App.xaml",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
-              "WhenOpened": "2025-04-05T18:15:17.56Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-05T18:15:17.56Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 3,
               "Title": "ProgramInfo.cs",
               "DocumentMoniker": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\Models\\ProgramInfo.cs",
               "RelativeDocumentMoniker": "Models\\ProgramInfo.cs",
               "ToolTip": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\Models\\ProgramInfo.cs",
               "RelativeToolTip": "Models\\ProgramInfo.cs",
-              "ViewState": "AgIAACoAAAAAAAAAAAAUwFoAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFoAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-05T17:59:20.804Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-05T17:59:20.804Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "EPGVirtualizingPanel.cs",
               "DocumentMoniker": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\Controls\\EPGVirtualizingPanel.cs",
               "RelativeDocumentMoniker": "Controls\\EPGVirtualizingPanel.cs",
               "ToolTip": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\Controls\\EPGVirtualizingPanel.cs",
               "RelativeToolTip": "Controls\\EPGVirtualizingPanel.cs",
-              "ViewState": "AgIAAEgDAAAAAAAAAAAqwHUDAAAFAAAAAAAAAA==",
+              "ViewState": "AgIAAEYAAAAAAAAAAAAMwEkAAAAhAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-05T17:43:57.042Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "MainWindow.xaml",
-              "DocumentMoniker": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\MainWindow.xaml",
-              "RelativeDocumentMoniker": "MainWindow.xaml",
-              "ToolTip": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\MainWindow.xaml",
-              "RelativeToolTip": "MainWindow.xaml",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
-              "WhenOpened": "2025-04-05T17:39:05.317Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-06T13:08:47.18Z"
             },
             {
               "$type": "Document",
@@ -151,7 +177,7 @@
               "RelativeDocumentMoniker": "MainWindow.xaml.cs",
               "ToolTip": "C:\\Users\\Shane\\Documents\\GitHub\\EPGXaml\\EPGVirtualization\\MainWindow.xaml.cs",
               "RelativeToolTip": "MainWindow.xaml.cs",
-              "ViewState": "AgIAAA0AAAAAAAAAAAAiwCgAAAA9AAAAAAAAAA==",
+              "ViewState": "AgIAAAgAAAAAAAAAAAAxwB4AAAAzAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-04-05T17:39:04.787Z",
               "EditorCaption": ""

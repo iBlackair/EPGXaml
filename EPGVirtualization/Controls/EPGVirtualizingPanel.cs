@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EPGVirtualization.Controls;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -129,6 +130,7 @@ namespace EPGVirtualization
         private List<ProgramControl> _programControls = new List<ProgramControl>();
         private Dictionary<int, List<ProgramInfo>> _programsByChannel = new Dictionary<int, List<ProgramInfo>>();
         private List<ChannelRow> _channelRows = new List<ChannelRow>();
+        
         private double _horizontalOffset = 0;
         private double _verticalOffset = 0;
         private Point _lastDragPosition;
@@ -146,7 +148,6 @@ namespace EPGVirtualization
         {
             Loaded += OnLoaded;
         }
-
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             if (Programs != null)
@@ -175,6 +176,67 @@ namespace EPGVirtualization
             // Get channel scroll viewer
             var channelScrollViewer = GetTemplateChild("PART_ChannelScrollViewer") as ScrollViewer;
             _channelPanel = GetTemplateChild("PART_ChannelPanel") as StackPanel;
+
+            // Wire up the date display click event
+            // Wire up the date display click event
+            if (GetTemplateChild("PART_DateDisplay") is TextBlock dateDisplay)
+            {
+                // Convert the TextBlock to a clickable element by adding a transparent Button
+                var parent = dateDisplay.Parent as Grid;
+                if (parent != null)
+                {
+                    var clickArea = new Button
+                    {
+                        Background = Brushes.Transparent,
+                        BorderThickness = new Thickness(0),
+                        Cursor = Cursors.Hand,
+                        Content = dateDisplay
+                    };
+
+                    // Remove the TextBlock from its parent
+                    parent.Children.Remove(dateDisplay);
+
+                    // Add the button with the TextBlock inside
+                    parent.Children.Add(clickArea);
+
+                    // Wire up the click event
+                    clickArea.Click += (s, e) =>
+                    {
+                        if (GetTemplateChild("PART_DatePickerPopup") is Popup popup)
+                        {
+                            popup.IsOpen = !popup.IsOpen;
+                            e.Handled = true;
+                        }
+                    };
+                }
+            }
+            if (GetTemplateChild("PART_DateButton") is Button dateButton)
+            {
+                dateButton.Click += (s, e) =>
+                {
+                    if (GetTemplateChild("PART_DatePickerPopup") is Popup popup)
+                    {
+                        popup.IsOpen = !popup.IsOpen;
+                        e.Handled = true;
+                    }
+                };
+            }
+
+            // Wire up the date picker selection event
+            if (GetTemplateChild("PART_DatePicker") is DatePicker datePicker)
+            {
+                datePicker.SelectedDateChanged += (s, e) =>
+                {
+                    // When date changes, close the popup
+                    if (GetTemplateChild("PART_DatePickerPopup") is Popup popup)
+                    {
+                        popup.IsOpen = false;
+                    }
+
+                    // Update the layout with the new date
+                    UpdateLayout();
+                };
+            }
 
             if (_programGridScrollViewer != null)
             {
@@ -321,6 +383,11 @@ namespace EPGVirtualization
 
         #region Public Methods
 
+        public void SetChannels(List<ChannelRow> channels)
+        {
+            // This method is not used in the current implementation
+            // but can be used to set channel information if needed
+        }
         public void SetPrograms(List<ProgramInfo> programs)
         {
             Programs = programs;
@@ -400,6 +467,7 @@ namespace EPGVirtualization
                 _channelRows.Add(new ChannelRow
                 {
                     ChannelIndex = channelIndex,
+                    ChannelLogo = null, // Placeholder for channel logo
                     ChannelName = $"Channel {channelIndex + 1}",
                     Programs = _programsByChannel[channelIndex].OrderBy(p => p.StartTime).ToList()
                 });
@@ -597,39 +665,64 @@ namespace EPGVirtualization
         private void DrawChannelLabels()
         {
             _channelPanel.Children.Clear();
-
             // Define alternating background colors for channel rows
             var evenRowBrush = new SolidColorBrush(Color.FromRgb(245, 245, 250)); // Light blue-gray
             var oddRowBrush = new SolidColorBrush(Color.FromRgb(235, 235, 255));  // Slightly darker blue-gray
-
             for (int i = 0; i < _channelRows.Count; i++)
             {
                 var channel = _channelRows[i];
-
                 // Determine if this is an even or odd row
                 var isEvenRow = i % 2 == 0;
                 var rowBrush = isEvenRow ? evenRowBrush : oddRowBrush;
-
                 var rowHeight = Math.Floor(ChannelHeight * Zoom); // Ensure whole pixel values
-
                 var label = new Border
                 {
                     Width = Math.Floor(ChannelLabelWidth), // Ensure whole pixel values
                     Height = rowHeight,
                     BorderBrush = Brushes.Gray,
                     BorderThickness = new Thickness(0, 0, 0, 1),
-                    Background = rowBrush
+                    Background = oddRowBrush
                 };
 
+                // Create a StackPanel to hold both the image and text horizontally
+                var stackPanel = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+
+                // Create an image box
+                var imageBox = new Border
+                {
+                    Width = 16,
+                    Height = 16,
+                    Margin = new Thickness(5, 0, 5, 0),
+                    Background = Brushes.Transparent
+                };
+
+                // Create an Image control (you can set the Source property later)
+                var image = new Image
+                {
+                    Stretch = Stretch.Uniform
+                };
+                image.Source = channel.ChannelLogo;
+                imageBox.Child = image;
+
+                // Create the text block for the channel name
                 var text = new TextBlock
                 {
                     Text = channel.ChannelName,
                     VerticalAlignment = VerticalAlignment.Center,
-                    FontWeight = FontWeights.SemiBold,
-                    Margin = new Thickness(5, 0, 0, 0)
+                    FontWeight = FontWeights.SemiBold
                 };
 
-                label.Child = text;
+                // Add both to the stack panel
+                stackPanel.Children.Add(imageBox);
+                stackPanel.Children.Add(text);
+
+                // Set the stack panel as the content of the border
+                label.Child = stackPanel;
+
                 _channelPanel.Children.Add(label);
             }
         }
@@ -710,9 +803,10 @@ namespace EPGVirtualization
 
         #region Helper Classes
 
-        private class ChannelRow
+        public class ChannelRow
         {
             public int ChannelIndex { get; set; }
+            public ImageSource ChannelLogo { get; set; }
             public string ChannelName { get; set; }
             public List<ProgramInfo> Programs { get; set; } = new List<ProgramInfo>();
         }
@@ -720,192 +814,6 @@ namespace EPGVirtualization
         #endregion
     }
 
-    /// <summary>
-    /// Custom control for a program in the EPG
-    /// </summary>
-    public class ProgramControl : Control
-    {
-        // First program color set
-        private static readonly SolidColorBrush Color1Selected = new SolidColorBrush(Color.FromRgb(100, 149, 237)); // Cornflower Blue
-        private static readonly SolidColorBrush Color1Normal = new SolidColorBrush(Color.FromRgb(202, 225, 255));   // Light blue
-
-        // Second program color set (alternating)
-        private static readonly SolidColorBrush Color2Selected = new SolidColorBrush(Color.FromRgb(70, 130, 180));   // Steel Blue
-        private static readonly SolidColorBrush Color2Normal = new SolidColorBrush(Color.FromRgb(176, 196, 222));   // Light Steel Blue
-
-        // Property to determine whether this is an "odd" program in the sequence
-        public bool IsAlternatingProgram { get; set; }
-
-        static ProgramControl()
-        {
-            DefaultStyleKeyProperty.OverrideMetadata(
-                typeof(ProgramControl),
-                new FrameworkPropertyMetadata(typeof(ProgramControl)));
-        }
-
-        public ProgramControl()
-        {
-            // Default style properties
-            BorderThickness = new Thickness(1);
-            Margin = new Thickness(0);
-            Padding = new Thickness(3);
-            Cursor = Cursors.Hand;
-
-            // Ensure pixel-perfect rendering
-            SnapsToDevicePixels = true;
-            SetValue(RenderOptions.EdgeModeProperty, EdgeMode.Aliased);
-
-            // Set default template
-            Template = CreateDefaultTemplate();
-        }
-
-        private ControlTemplate CreateDefaultTemplate()
-        {
-            // Create a template with TextBlocks for title and time
-            var factory = new FrameworkElementFactory(typeof(Border));
-            factory.Name = "Border";
-            factory.SetValue(Border.CornerRadiusProperty, new CornerRadius(0));
-            factory.SetValue(Border.BorderBrushProperty, Brushes.DarkBlue);
-            factory.SetValue(SnapsToDevicePixelsProperty, true);
-            factory.SetValue(RenderOptions.EdgeModeProperty, EdgeMode.Aliased);
-
-            var backgroundBinding = new System.Windows.Data.Binding("Background");
-            backgroundBinding.RelativeSource = new RelativeSource(RelativeSourceMode.TemplatedParent);
-            factory.SetBinding(Border.BackgroundProperty, backgroundBinding);
-
-            var panel = new FrameworkElementFactory(typeof(StackPanel));
-            panel.SetValue(StackPanel.MarginProperty, new Thickness(2));
-            factory.AppendChild(panel);
-
-            var titleBlock = new FrameworkElementFactory(typeof(TextBlock));
-            titleBlock.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold);
-            titleBlock.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
-            titleBlock.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding("Title"));
-            panel.AppendChild(titleBlock);
-
-            var timeBlock = new FrameworkElementFactory(typeof(TextBlock));
-            timeBlock.SetValue(TextBlock.FontSizeProperty, 10.0);
-            timeBlock.SetValue(TextBlock.ForegroundProperty, Brushes.DarkGray);
-            timeBlock.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding("StartTime") { StringFormat = "{0:HH:mm}" });
-            panel.AppendChild(timeBlock);
-
-            return new ControlTemplate(typeof(ProgramControl)) { VisualTree = factory };
-        }
-
-        public void UpdateStyle(bool isSelected)
-        {
-            BorderThickness = isSelected ? new Thickness(2) : new Thickness(1);
-            BorderBrush = isSelected ? Brushes.DarkBlue : Brushes.SlateGray;
-
-            // Set background based on alternating flag and selection state
-            if (isSelected)
-            {
-                Background = IsAlternatingProgram ? Color2Selected : Color1Selected;
-            }
-            else
-            {
-                Background = IsAlternatingProgram ? Color2Normal : Color1Normal;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Helper converter for program background based on selection
-    /// </summary>
-    public class ProgramBackgroundConverter : System.Windows.Data.IValueConverter
-    {
-        // First program color set
-        private static readonly SolidColorBrush Color1Selected = new SolidColorBrush(Color.FromRgb(100, 149, 237)); // Cornflower Blue
-        private static readonly SolidColorBrush Color1Normal = new SolidColorBrush(Color.FromRgb(202, 225, 255));   // Light blue
-
-        // Second program color set (alternating)
-        private static readonly SolidColorBrush Color2Selected = new SolidColorBrush(Color.FromRgb(70, 130, 180));   // Steel Blue
-        private static readonly SolidColorBrush Color2Normal = new SolidColorBrush(Color.FromRgb(176, 196, 222));   // Light Steel Blue
-
-        // Dictionary to track program alternation by channel
-        private static Dictionary<int, Dictionary<DateTime, bool>> _alternatingState = new Dictionary<int, Dictionary<DateTime, bool>>();
-
-        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
-        {
-            bool isSelected = value is bool boolValue && boolValue;
-
-            // Check if we have the alternating flag from the ProgramControl
-            if (parameter is bool isAlternating)
-            {
-                if (isSelected)
-                {
-                    return isAlternating ? Color2Selected : Color1Selected;
-                }
-                else
-                {
-                    return isAlternating ? Color2Normal : Color1Normal;
-                }
-            }
-            // Default fallback if no alternating info
-            else if (parameter is ProgramInfo program)
-            {
-                // Get or create alternating tracking for this channel
-                if (!_alternatingState.TryGetValue(program.ChannelIndex, out var channelState))
-                {
-                    channelState = new Dictionary<DateTime, bool>();
-                    _alternatingState[program.ChannelIndex] = channelState;
-                }
-
-                // Get or determine alternating state for this program
-                if (!channelState.TryGetValue(program.StartTime, out bool isAlt))
-                {
-                    // Determine based on position in the sequence
-                    var programsList = _alternatingState.Keys
-                        .Where(k => k == program.ChannelIndex)
-                        .SelectMany(k => _alternatingState[k].Keys)
-                        .OrderBy(dt => dt)
-                        .ToList();
-
-                    isAlt = programsList.Count % 2 == 1;
-                    channelState[program.StartTime] = isAlt;
-                }
-
-                if (isSelected)
-                {
-                    return isAlt ? Color2Selected : Color1Selected;
-                }
-                else
-                {
-                    return isAlt ? Color2Normal : Color1Normal;
-                }
-            }
-
-            // Default fallback
-            return isSelected ? Color1Selected : Color1Normal;
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    /// <summary>
-    /// Converter to create a Thickness from a TimelineHeight value
-    /// </summary>
-    public class TimelineHeightToMarginConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            if (value is double height)
-            {
-                return new Thickness(0, height, 0, 0);
-            }
-            return new Thickness(0);
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            if (value is Thickness thickness)
-            {
-                return thickness.Top;
-            }
-            return 0.0;
-        }
-    }
+    
+    
 }
