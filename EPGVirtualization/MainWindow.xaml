@@ -1,0 +1,38 @@
+﻿<Window x:Class="EPGVirtualization.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:EPGVirtualization"
+        mc:Ignorable="d"
+        Title="EPG Viewer" Height="600" Width="1000">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="1*" />
+            <RowDefinition Height="1*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*" />
+            <ColumnDefinition Width="1*" />
+        </Grid.ColumnDefinitions>
+        <Border Background="Black">
+            
+        </Border>
+
+        <Border Background="Black" Grid.Column="1" Grid.ColumnSpan="2">
+            <TextBlock Text="VlC Player PlaceHolder" Foreground="White" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+
+        <local:EPGCanvas x:Name="EPGControl"
+                     ViewStartTime="{Binding Today}" 
+                     ChannelHeight="40"
+                     ChannelLabelWidth="100"
+                     TimelineHeight="40"
+                     PixelsPerMinute="3"
+                     Zoom="1.0"
+                     ProgramSelected="EPGControl_ProgramSelected" Grid.Row="2" Grid.ColumnSpan="2" />
+    </Grid>
+
+    <!-- EPG Control fills the window -->
+
+</Window>
