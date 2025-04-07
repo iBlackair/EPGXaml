@@ -37,26 +37,46 @@
 
                         <!-- Header corner with date display -->
                         <Border Grid.Row="0" Grid.Column="0" 
-                            Background="LightGray"
+                            Background="#FF070709"
                             SnapsToDevicePixels="True">
                             <Grid>
                                 <Button x:Name="PART_DateButton"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Cursor="Hand"
-                                    VerticalAlignment="Center"
-                                    HorizontalAlignment="Center">
-                                    <TextBlock Text="{Binding Path=ViewStartTime, RelativeSource={RelativeSource TemplatedParent}, StringFormat=\{0:yyyy-MM-dd\}}"
-                                        FontWeight="SemiBold"/>
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Cursor="Hand"
+                                                VerticalAlignment="Center"
+                                                HorizontalAlignment="Center" Foreground="#FFBABABC">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <TextBlock x:Name="DateText" 
+                                  Text="{Binding Path=ViewStartTime, RelativeSource={RelativeSource AncestorType={x:Type local:EPGCanvas}}, StringFormat=\{0:yyyy-MM-dd\}}"
+                                  FontWeight="SemiBold"/>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="DateText" Property="Foreground" Value="Gray"/>
+                                                            </Trigger>
+                                                            <Trigger Property="IsPressed" Value="True">
+                                                                <Setter TargetName="DateText" Property="Foreground" Value="Gray"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </Button.Style>
                                 </Button>
 
+                                <!-- Replace this in EPGCanvasTemplate.xaml -->
                                 <Popup x:Name="PART_DatePickerPopup" 
                                         PlacementTarget="{Binding ElementName=PART_DateButton}" 
                                         Placement="Bottom" 
                                         StaysOpen="False">
                                     <Border Background="White" BorderBrush="Gray" BorderThickness="1">
-                                        <DatePicker x:Name="PART_DatePicker" 
-                                                        SelectedDate="{Binding Path=ViewStartTime, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"/>
+                                        <Calendar x:Name="PART_Calendar" 
+                                                SelectedDate="{Binding Path=ViewStartTime, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"/>
                                     </Border>
                                 </Popup>
                             </Grid>
@@ -70,7 +90,7 @@
                                      Margin="0"
                                      SnapsToDevicePixels="True"
                                      RenderOptions.EdgeMode="Aliased"
-                                     x:Name="PART_TimelineScrollViewer">
+                                     x:Name="PART_TimelineScrollViewer" Foreground="#FFBABABC">
                             <Canvas x:Name="PART_TimelineCanvas" 
                                     Height="{Binding TimelineHeight, RelativeSource={RelativeSource TemplatedParent}}"
                                     Background="LightGray"
@@ -96,8 +116,8 @@
                         <!-- Main ScrollViewer that contains program grid -->
                         <ScrollViewer x:Name="PART_MainScrollViewer" 
                                       Grid.Row="1" Grid.Column="1"
-                                      HorizontalScrollBarVisibility="Auto"
-                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden"
                                       Padding="0"
                                       Margin="0"
                                       SnapsToDevicePixels="True"

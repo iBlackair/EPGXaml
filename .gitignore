@@ -1,0 +1,3 @@
+# Ignore specific project Debug/Release folders
+EPGVirtualization/bin/[Dd]ebug/
+EPGVirtualization/bin/[Rr]elease/

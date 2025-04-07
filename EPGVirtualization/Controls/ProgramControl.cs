@@ -12,12 +12,12 @@ namespace EPGVirtualization.Controls
     public class ProgramControl : Control
     {
         // First program color set
-        private static readonly SolidColorBrush Color1Selected = new(Color.FromRgb(100, 149, 237)); // Cornflower Blue
-        private static readonly SolidColorBrush Color1Normal = new(Color.FromRgb(202, 225, 255));   // Light blue
+        private static readonly SolidColorBrush Color1Selected = new(Color.FromRgb(18, 18, 20)); // Cornflower Blue
+        private static readonly SolidColorBrush Color1Normal = new(Color.FromRgb(38, 38, 38));   // Light blue
 
         // Second program color set (alternating)
-        private static readonly SolidColorBrush Color2Selected = new(Color.FromRgb(70, 130, 180));   // Steel Blue
-        private static readonly SolidColorBrush Color2Normal = new(Color.FromRgb(176, 196, 222));   // Light Steel Blue
+        private static readonly SolidColorBrush Color2Normal = new(Color.FromRgb(85, 85, 85));   // Steel Blue
+        private static readonly SolidColorBrush Color2Selected = new(Color.FromRgb(63, 63, 65));   // Light Steel Blue
 
         // Property to determine whether this is an "odd" program in the sequence
         public bool IsAlternatingProgram { get; set; }
@@ -66,6 +66,7 @@ namespace EPGVirtualization.Controls
             var titleBlock = new FrameworkElementFactory(typeof(TextBlock));
             titleBlock.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold);
             titleBlock.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
+            titleBlock.SetValue(TextBlock.ForegroundProperty, new SolidColorBrush(Color.FromRgb(194,194,194)));
             titleBlock.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding("Title"));
             panel.AppendChild(titleBlock);
 

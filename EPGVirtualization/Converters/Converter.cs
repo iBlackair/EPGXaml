@@ -12,11 +12,11 @@ namespace EPGVirtualization.Converters
     {
         // First program color set
         private static readonly SolidColorBrush Color1Selected = new SolidColorBrush(Color.FromRgb(100, 149, 237)); // Cornflower Blue
-        private static readonly SolidColorBrush Color1Normal = new SolidColorBrush(Color.FromRgb(202, 225, 255));   // Light blue
+        private static readonly SolidColorBrush Color1Normal = new SolidColorBrush(Color.FromRgb(25, 25, 28));   // Light blue
 
         // Second program color set (alternating)
         private static readonly SolidColorBrush Color2Selected = new SolidColorBrush(Color.FromRgb(70, 130, 180));   // Steel Blue
-        private static readonly SolidColorBrush Color2Normal = new SolidColorBrush(Color.FromRgb(176, 196, 222));   // Light Steel Blue
+        private static readonly SolidColorBrush Color2Normal = new SolidColorBrush(Color.FromRgb(19, 20, 22));   // Light Steel Blue
 
         // Dictionary to track program alternation by channel
         private static Dictionary<int, Dictionary<DateTime, bool>> _alternatingState = new Dictionary<int, Dictionary<DateTime, bool>>();
@@ -26,19 +26,19 @@ namespace EPGVirtualization.Converters
             bool isSelected = value is bool boolValue && boolValue;
 
             // Check if we have the alternating flag from the ProgramControl
-            if (parameter is bool isAlternating)
-            {
-                if (isSelected)
-                {
-                    return isAlternating ? Color2Selected : Color1Selected;
-                }
-                else
-                {
-                    return isAlternating ? Color2Normal : Color1Normal;
-                }
-            }
+            //if (parameter is bool isAlternating)
+            //{
+            //    if (isSelected)
+            //    {
+            //        return isAlternating ? Color2Selected : Color1Selected;
+            //    }
+            //    else
+            //    {
+            //        return isAlternating ? Color2Normal : Color1Normal;
+            //    }
+            //}
             // Default fallback if no alternating info
-            else if (parameter is ProgramInfo program)
+            if (parameter is ProgramInfo program)
             {
                 // Get or create alternating tracking for this channel
                 if (!_alternatingState.TryGetValue(program.ChannelIndex, out var channelState))

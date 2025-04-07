@@ -11,6 +11,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
 namespace EPGVirtualization
@@ -221,11 +222,25 @@ namespace EPGVirtualization
                     }
                 };
             }
-
             // Wire up the date picker selection event
             if (GetTemplateChild("PART_DatePicker") is DatePicker datePicker)
             {
                 datePicker.SelectedDateChanged += (s, e) =>
+                {
+                    // When date changes, close the popup
+                    if (GetTemplateChild("PART_DatePickerPopup") is Popup popup)
+                    {
+                        popup.IsOpen = false;
+                    }
+
+                    // Update the layout with the new date
+                    UpdateLayout();
+                };
+            }
+            // Wire up the calendar selection event
+            if (GetTemplateChild("PART_Calendar") is System.Windows.Controls.Calendar calendar)
+            {
+                calendar.SelectedDatesChanged += (s, e) =>
                 {
                     // When date changes, close the popup
                     if (GetTemplateChild("PART_DatePickerPopup") is Popup popup)
@@ -265,13 +280,14 @@ namespace EPGVirtualization
                 // Add mouse events to program grid for dragging
                 if (_programGrid != null)
                 {
-                    _programGrid.MouseLeftButtonDown += OnProgramGridMouseLeftButtonDown;
+                    
                     _programGrid.MouseMove += OnProgramGridMouseMove;
                     _programGrid.MouseLeftButtonUp += OnProgramGridMouseLeftButtonUp;
-                    _programGrid.MouseWheel += OnProgramGridMouseWheel;
+                    //_programGrid.MouseWheel += OnProgramGridMouseWheel;
+                    //_programGrid.MouseLeftButtonDown += OnProgramGridMouseLeftButtonDown;
+                    _programGrid.PreviewMouseDown += _programGrid_PreviewMouseDown; ;
                 }
             }
-
             // Start timer for current time marker
             var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
             timer.Tick += (s, e) => DrawCurrentTimeMarker();
@@ -286,6 +302,24 @@ namespace EPGVirtualization
                 }), DispatcherPriority.Render);
             }
         }
+
+        private void _programGrid_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            Trace.WriteLine($"MouseDown triggered: Left={e.LeftButton}, Right={e.RightButton}");
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                // Capture the mouse to allow dragging
+                _programGrid.CaptureMouse();
+                _lastDragPosition = e.GetPosition(_programGrid);
+                _isDragging = true;
+                //_programGrid.ReleaseMouseCapture();
+            }
+            else if (e.RightButton == MouseButtonState.Pressed)
+            {
+
+            }
+        }
+
 
         // Alternative implementation for more efficient scrolling
 
@@ -309,29 +343,42 @@ namespace EPGVirtualization
         }
         
 
-        private void OnProgramGridMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            _lastDragPosition = e.GetPosition(_programGrid);
-            _isDragging = true;
-            _programGrid.CaptureMouse();
-            e.Handled = true;
-        }
-
         private void OnProgramGridMouseMove(object sender, MouseEventArgs e)
         {
             if (_isDragging && _programGridScrollViewer != null)
             {
                 var currentPos = e.GetPosition(_programGrid);
-                var delta = _lastDragPosition - currentPos;
+                var delta = _lastDragPosition.X - currentPos.X;
 
-                _programGridScrollViewer.ScrollToHorizontalOffset(_programGridScrollViewer.HorizontalOffset + delta.X);
-                _programGridScrollViewer.ScrollToVerticalOffset(_programGridScrollViewer.VerticalOffset + delta.Y);
+                //Point currentPosition = e.GetPosition(this);
+
+                //// Only allow horizontal scrolling - remove vertical scrolling
+                double deltaX = currentPos.X - _lastDragPosition.X;
+
+                _horizontalOffset = Math.Max(0, _horizontalOffset - deltaX);
+                //// Vertical offset remains fixed during dragging
+
+                //// Update only X position, keep Y the same
+               // _lastMousePosition = new Point(currentPosition.X, _lastMousePosition.Y);
+
+                _programGridScrollViewer.ScrollToHorizontalOffset(_horizontalOffset);
+
+
+                //_programGridScrollViewer.ScrollToVerticalOffset(_programGridScrollViewer.VerticalOffset + delta.Y);
 
                 _lastDragPosition = currentPos;
                 e.Handled = true;
             }
         }
+        private void SmoothScroll(double newOffset)
+        {
+            DoubleAnimation animation = new DoubleAnimation(
+                _programGridScrollViewer.HorizontalOffset,
+                newOffset,
+                TimeSpan.FromMilliseconds(100));
 
+            _programGridScrollViewer.BeginAnimation(ScrollViewer.HorizontalOffsetProperty, animation);
+        }
         private void OnProgramGridMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             if (_isDragging)
@@ -359,7 +406,7 @@ namespace EPGVirtualization
                 {
                     // Calculate new offset to keep mouse over same time point
                     var newOffset = (timeOffset * PixelsPerMinute * Zoom) - (mousePos.X - ChannelLabelWidth);
-                    _programGridScrollViewer.ScrollToHorizontalOffset(Math.Max(0, newOffset));
+                    //_programGridScrollViewer.ScrollToHorizontalOffset(Math.Max(0, newOffset));
                 }
 
                 e.Handled = true;
@@ -520,8 +567,8 @@ namespace EPGVirtualization
         private void DrawRowBackgrounds()
         {
             // Define alternating background colors for channel rows
-            var evenRowBrush = new SolidColorBrush(Color.FromRgb(245, 245, 250)); // Light blue-gray
-            var oddRowBrush = new SolidColorBrush(Color.FromRgb(235, 235, 255));  // Slightly darker blue-gray
+            var evenRowBrush = new SolidColorBrush(Color.FromRgb(25, 25, 28)); // Light blue-gray
+            var oddRowBrush = new SolidColorBrush(Color.FromRgb(19, 20, 22));  // Slightly darker blue-gray
 
             for (int i = 0; i < _channelRows.Count; i++)
             {
@@ -626,9 +673,11 @@ namespace EPGVirtualization
                 {
                     Width = 60 * PixelsPerMinute * Zoom,
                     Height = TimelineHeight,
-                    Fill = new SolidColorBrush(Color.FromRgb(33, 33, 33)),
+                    Fill = new SolidColorBrush(Color.FromRgb(7, 7, 9)),
                     Stroke = Brushes.Gray,
-                    StrokeThickness = 1
+                    StrokeThickness = 1,
+                    
+                    HorizontalAlignment = HorizontalAlignment.Center
                 };
                 Canvas.SetLeft(rect, x);
                 _timelineCanvas.Children.Add(rect);
@@ -638,9 +687,9 @@ namespace EPGVirtualization
                 {
                     Text = time.ToString("HH:00"),
                     FontSize = 14,
-                    VerticalAlignment = VerticalAlignment.Center                    
+                    VerticalAlignment = VerticalAlignment.Center,
                 };
-                Canvas.SetLeft(text, x + 5);
+                Canvas.SetLeft(text, x + rect.Width / 2 -17);
                 Canvas.SetTop(text, 10);
                 _timelineCanvas.Children.Add(text);
 
@@ -666,8 +715,8 @@ namespace EPGVirtualization
         {
             _channelPanel.Children.Clear();
             // Define alternating background colors for channel rows
-            var evenRowBrush = new SolidColorBrush(Color.FromRgb(245, 245, 250)); // Light blue-gray
-            var oddRowBrush = new SolidColorBrush(Color.FromRgb(235, 235, 255));  // Slightly darker blue-gray
+            var evenRowBrush = new SolidColorBrush(Color.FromRgb(22, 22, 22)); // Light blue-gray
+            var oddRowBrush = new SolidColorBrush(Color.FromRgb(22, 22, 22));  // Slightly darker blue-gray
             for (int i = 0; i < _channelRows.Count; i++)
             {
                 var channel = _channelRows[i];
@@ -681,7 +730,7 @@ namespace EPGVirtualization
                     Height = rowHeight,
                     BorderBrush = Brushes.Gray,
                     BorderThickness = new Thickness(0, 0, 0, 1),
-                    Background = oddRowBrush
+                    Background = new SolidColorBrush(Color.FromRgb(7,7,9))                    
                 };
 
                 // Create a StackPanel to hold both the image and text horizontally
@@ -713,7 +762,8 @@ namespace EPGVirtualization
                 {
                     Text = channel.ChannelName,
                     VerticalAlignment = VerticalAlignment.Center,
-                    FontWeight = FontWeights.SemiBold
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = new SolidColorBrush(Color.FromRgb(188,188,186)),
                 };
 
                 // Add both to the stack panel
