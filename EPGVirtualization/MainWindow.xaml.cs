@@ -1,66 +1,205 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Windows;
+using EPGVirtualization;
+using EPGVirtualization.Controls;
 
 namespace EPGVirtualization
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window, INotifyPropertyChanged
     {
+        private DateTime _currentDate = DateTime.Today;
+        private ObservableCollection<ProgramInfo> _programList = new ObservableCollection<ProgramInfo>();
+        private ProgramInfo _selectedProgram;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public DateTime CurrentDate
+        {
+            get => _currentDate;
+            set
+            {
+                if (_currentDate != value)
+                {
+                    _currentDate = value;
+                    OnPropertyChanged();
+                    LoadProgramsForDate(_currentDate);
+                }
+            }
+        }
+
+        public ObservableCollection<ProgramInfo> ProgramList
+        {
+            get => _programList;
+            set
+            {
+                _programList = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public ProgramInfo SelectedProgram
+        {
+            get => _selectedProgram;
+            set
+            {
+                if (_selectedProgram != value)
+                {
+                    _selectedProgram = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(SelectedProgramEndTime));
+                }
+            }
+        }
+
+        public DateTime SelectedProgramEndTime
+        {
+            get => SelectedProgram != null ? SelectedProgram.StartTime.Add(SelectedProgram.Duration) : DateTime.MinValue;
+        }
+
         public MainWindow()
         {
-            // Make sure to add the style resources in App.xaml or MainWindow.xaml
             InitializeComponent();
+            DataContext = this;
 
-            // Generate sample data
-            var programs = GenerateSamplePrograms();
-            // Set the data for our EPG control
-            EPGControl.SetPrograms(programs);
+            // Initialize EPG with sample data
+            LoadSampleData();
 
-            // Log information to debug
-            Console.WriteLine($"Created {programs.Count} programs");
+            // Navigate to current time
+            EPG.Loaded += (s, e) => EPG.NavigateToNow();
         }
 
-        private void EPGControl_ProgramSelected(object sender, ProgramInfo program)
+        private void LoadSampleData()
         {
-            // Handle program selection
-            //MessageBox.Show($"Selected: {program.Title} at {program.StartTime:HH:mm}");
-        }
-
-        private List<ProgramInfo> GenerateSamplePrograms()
-        {
-            var programs = new List<ProgramInfo>();
-            var random = new Random(42); // Fixed seed for reproducible results
-
-            // Generate programs across 20 channels for 24 hours
-            for (int channelIndex = 0; channelIndex < 40; channelIndex++)
+            // Generate channel data
+            var channels = new List<string>
             {
-                DateTime currentTime = DateTime.Parse("2025/4/1 12:00:00"); ;
+                "BBC One", "BBC Two", "ITV", "Channel 4", "Channel 5",
+                "Sky One", "Sky Atlantic", "History", "Discovery", "National Geographic"
+            };
 
-                // Add programs until we fill the 24-hour period
-                while (currentTime < DateTime.Today.AddDays(13))
+            // Generate random programs for today
+            var random = new Random(42); // Fixed seed for consistent results
+            var programs = new List<ProgramInfo>();
+
+            // Generate programs for all channels
+            for (int channelIndex = 0; channelIndex < channels.Count; channelIndex++)
+            {
+                var startTime = CurrentDate.AddHours(6); // Start at 6 AM
+
+                while (startTime < CurrentDate.AddHours(30)) // Go to 6 AM next day
                 {
-                    // Random duration between 15 and 120 minutes, in 15-minute increments
-                    int durationMinutes = random.Next(1, 8) * 15;
+                    // Random duration between 30 minutes and 2 hours
+                    var durationMinutes = random.Next(1, 5) * 30;
                     var duration = TimeSpan.FromMinutes(durationMinutes);
 
                     // Create program
-                    var program = new ProgramInfo
+                    programs.Add(new ProgramInfo
                     {
-                        Title = $"Program {currentTime.Hour:00}:{currentTime.Minute:00} Ch{channelIndex + 1}",
-                        StartTime = currentTime,
+                        Id = Guid.NewGuid().ToString(),
+                        ChannelIndex = channelIndex,
+                        Title = GetRandomProgramTitle(random),
+                        Description = "This is a sample program description that would typically contain information about the show, its cast, and other relevant details.",
+                        StartTime = startTime,
                         Duration = duration,
-                        ChannelIndex = channelIndex
-                    };
+                        Category = GetRandomCategory(random)
+                    });
 
-                    programs.Add(program);
-
-                    // Move to next program
-                    currentTime = currentTime.AddMinutes(durationMinutes);
+                    // Move to next time slot
+                    startTime = startTime.AddMinutes(durationMinutes);
                 }
             }
 
-            return programs;
+            ProgramList = new ObservableCollection<ProgramInfo>(programs);
         }
 
+        private string GetRandomProgramTitle(Random random)
+        {
+            var titles = new[]
+            {
+                "News at Ten", "Movie: The Adventure", "Documentary Now", "Sports Review",
+                "Late Night Show", "Morning Talk", "Nature Explorer", "History Uncovered",
+                "Science Today", "The Comedy Hour", "Drama Series", "Reality Challenge",
+                "Cooking with Stars", "Travel Destinations", "Music Special", "Tech Update"
+            };
+
+            return titles[random.Next(titles.Length)];
+        }
+
+        private string GetRandomCategory(Random random)
+        {
+            var categories = new[]
+            {
+                "News", "Movies", "Documentary", "Sports",
+                "Entertainment", "Talk Show", "Nature", "History",
+                "Science", "Comedy", "Drama", "Reality",
+                "Cooking", "Travel", "Music", "Technology"
+            };
+
+            return categories[random.Next(categories.Length)];
+        }
+
+        private void LoadProgramsForDate(DateTime date)
+        {
+            // In a real app, you would load actual program data for the specified date
+            // For this example, we'll just modify the sample data to use the new date
+
+            var newPrograms = ProgramList.ToList();
+            var dayDifference = (date - CurrentDate).Days;
+
+            foreach (var program in newPrograms)
+            {
+                program.StartTime = program.StartTime.AddDays(dayDifference);
+            }
+
+            ProgramList = new ObservableCollection<ProgramInfo>(newPrograms);
+        }
+
+        private void TodayButton_Click(object sender, RoutedEventArgs e)
+        {
+            CurrentDate = DateTime.Today;
+        }
+
+        private void PreviousDayButton_Click(object sender, RoutedEventArgs e)
+        {
+            CurrentDate = CurrentDate.AddDays(-1);
+        }
+
+        private void NextDayButton_Click(object sender, RoutedEventArgs e)
+        {
+            CurrentDate = CurrentDate.AddDays(1);
+        }
+
+        private void NowButton_Click(object sender, RoutedEventArgs e)
+        {
+            CurrentDate = DateTime.Today;
+            EPG.NavigateToNow();
+        }
+
+        private void WatchButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (SelectedProgram != null)
+            {
+                MessageBox.Show($"Starting playback: {SelectedProgram.Title}", "Watch", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void RecordButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (SelectedProgram != null)
+            {
+                MessageBox.Show($"Recording scheduled: {SelectedProgram.Title}", "Record", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+
+        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 }

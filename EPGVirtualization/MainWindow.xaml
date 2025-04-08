@@ -4,37 +4,121 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:EPGVirtualization"
+        xmlns:epg="clr-namespace:EPGVirtualization.Controls;assembly=EPGVirtualization"
+        xmlns:converters="clr-namespace:EPGVirtualization.Converters"
         mc:Ignorable="d"
-        Title="EPG Viewer" Height="600" Width="1000">
+        Title="EPG Viewer" Height="720" Width="1280"
+        Background="#FF121212">
+
+    <Window.Resources>
+        <!-- Styles for buttons -->
+        <Style x:Key="NavButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF303030"/>
+            <Setter Property="Foreground" Value="#FFEEEEEE"/>
+            <Setter Property="BorderBrush" Value="#FF505050"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Padding" Value="12,0"/>
+        </Style>
+
+        <!-- Styles for program details -->
+        <Style x:Key="ProgramTitleStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFEEEEEE"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <Style x:Key="ProgramDetailStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFBBBBBB"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+
+        <!-- Converters -->
+        <converters:DateToFormattedStringConverter x:Key="DateToFormattedStringConverter" />
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+        <converters:NullToBoolConverter x:Key="NullToBoolConverter" />
+    </Window.Resources>
+
     <Grid>
-        <!--<Grid.RowDefinitions>
-            <RowDefinition Height="1*" />
-            <RowDefinition Height="1*" />
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="1*" />
-            <ColumnDefinition Width="1*" />
-        </Grid.ColumnDefinitions>-->
-        <!--<Border Background="Black">
-            
-        </Border>
-        <Border Background="Black" Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="White">
-            <TextBlock Text="Program Discription PlaceHolder" Foreground="White" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Border>
-        <Border Background="Black" Grid.Column="1" Grid.ColumnSpan="2">
-            <TextBlock Text="VlC Player PlaceHolder" Foreground="White" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Border>-->
 
-        <local:EPGCanvas x:Name="EPGControl"
-                     ViewStartTime="{Binding Today}" 
-                     ChannelHeight="40"
-                     ChannelLabelWidth="100"
-                     TimelineHeight="40"
-                     PixelsPerMinute="3"
-                     Zoom="1.0"
-                     ProgramSelected="EPGControl_ProgramSelected" Grid.Row="2" Grid.ColumnSpan="2" Grid.RowSpan="2" />
+        <!-- Navigation Toolbar -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#FF202020">
+            <Button Content="Today" Style="{StaticResource NavButtonStyle}" Click="TodayButton_Click"/>
+            <Button Content="Previous Day" Style="{StaticResource NavButtonStyle}" Click="PreviousDayButton_Click"/>
+            <Button Content="Next Day" Style="{StaticResource NavButtonStyle}" Click="NextDayButton_Click"/>
+            <Button Content="Now" Style="{StaticResource NavButtonStyle}" Click="NowButton_Click"/>
+            <Separator Margin="8,0" Background="#FF505050" Width="1"/>
+            <TextBlock Text="{Binding ElementName=EPG, Path=ViewStartTime, Converter={StaticResource DateToFormattedStringConverter}, ConverterParameter='dddd, MMMM d, yyyy'}" 
+                       VerticalAlignment="Center" Foreground="#FFEEEEEE" FontWeight="SemiBold"/>
+            <Separator Margin="8,0" Background="#FF505050" Width="1"/>
+            <Slider x:Name="ZoomSlider" Width="150" VerticalAlignment="Center" Minimum="0.5" Maximum="3.0" 
+                    Value="{Binding ElementName=EPG, Path=Zoom}" TickFrequency="0.5" TickPlacement="BottomRight"/>
+        </StackPanel>
+
+        <!-- EPG Control -->
+        <epg:EPGControl x:Name="EPG" Grid.Row="1" 
+                        ViewStartTime="{Binding CurrentDate}" 
+                        Programs="{Binding ProgramList}"
+                        SelectedProgram="{Binding SelectedProgram, Mode=TwoWay}"
+                        Zoom="1.0"
+                        PixelsPerMinute="3"
+                        ChannelHeight="40"
+                        TimelineHeight="40"
+                        ChannelLabelWidth="120"
+                        EvenRowBackground="#FF191919"
+                        OddRowBackground="#FF131314"
+                        TimelineBrush="#FF070709"
+                        ChannelLabelBrush="#FF070709"
+                        ProgramSelected="EPG_ProgramSelected"
+                        ProgramAction="EPG_ProgramAction"
+                        ViewChanged="EPG_ViewChanged"/>
+
+        <!-- Program Details Panel -->
+        <Border Grid.Row="2" Background="#FF202020" BorderBrush="#FF303030" BorderThickness="0,1,0,0" Padding="12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Program Details -->
+                <StackPanel Grid.Column="0">
+                    <TextBlock x:Name="ProgramTitle" 
+                               Text="{Binding SelectedProgram.Title, FallbackValue='No program selected'}" 
+                               Style="{StaticResource ProgramTitleStyle}"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="{Binding SelectedProgram.StartTime, StringFormat=\{0:HH:mm\}, FallbackValue=''}" 
+                                   Foreground="#FFBBBBBB"/>
+                        <TextBlock Text=" - " Foreground="#FFBBBBBB" 
+                                   Visibility="{Binding SelectedProgram, Converter={StaticResource NullToVisibilityConverter}}"/>
+                        <TextBlock Text="{Binding SelectedProgramEndTime, StringFormat=\{0:HH:mm\}, FallbackValue=''}" 
+                                   Foreground="#FFBBBBBB"/>
+                        <TextBlock Text=" | " Foreground="#FFBBBBBB" Margin="8,0" 
+                                   Visibility="{Binding SelectedProgram, Converter={StaticResource NullToVisibilityConverter}}"/>
+                        <TextBlock Text="{Binding SelectedProgram.Category, FallbackValue=''}" 
+                                   Foreground="#FF88AAFF"/>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding SelectedProgram.Description, FallbackValue='Select a program to view details'}" 
+                               Style="{StaticResource ProgramDetailStyle}"/>
+                </StackPanel>
+
+                <!-- Action Buttons -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <Button Content="Watch" Style="{StaticResource NavButtonStyle}" Click="WatchButton_Click"
+                            IsEnabled="{Binding SelectedProgram, Converter={StaticResource NullToBoolConverter}}"/>
+                    <Button Content="Record" Style="{StaticResource NavButtonStyle}" Click="RecordButton_Click"
+                            IsEnabled="{Binding SelectedProgram, Converter={StaticResource NullToBoolConverter}}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
-
-    <!-- EPG Control fills the window -->
-
 </Window>

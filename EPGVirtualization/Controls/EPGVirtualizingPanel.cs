@@ -161,7 +161,7 @@ namespace EPGVirtualization
                 }), DispatcherPriority.Loaded);
             }
         }
-
+        private TranslateTransform _panTransform = new TranslateTransform();
         public override void OnApplyTemplate()
         {
             base.OnApplyTemplate();
@@ -169,6 +169,11 @@ namespace EPGVirtualization
             // Get main scroll viewer that contains the program grid
             _programGridScrollViewer = GetTemplateChild("PART_MainScrollViewer") as ScrollViewer;
             _programGrid = GetTemplateChild("PART_ProgramGrid") as Canvas;
+            if (_programGrid != null)
+            {
+                // Set up the transform for panning
+                _programGrid.RenderTransform = _panTransform;
+            }
             _timelineCanvas = GetTemplateChild("PART_TimelineCanvas") as Canvas;
 
             // Get the timeline scroll viewer
@@ -302,27 +307,6 @@ namespace EPGVirtualization
                 }), DispatcherPriority.Render);
             }
         }
-
-        private void _programGrid_PreviewMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            Trace.WriteLine($"MouseDown triggered: Left={e.LeftButton}, Right={e.RightButton}");
-            if (e.LeftButton == MouseButtonState.Pressed)
-            {
-                // Capture the mouse to allow dragging
-                _programGrid.CaptureMouse();
-                _lastDragPosition = e.GetPosition(_programGrid);
-                _isDragging = true;
-                //_programGrid.ReleaseMouseCapture();
-            }
-            else if (e.RightButton == MouseButtonState.Pressed)
-            {
-
-            }
-        }
-
-
-        // Alternative implementation for more efficient scrolling
-
         #endregion
 
         #region Event Handlers
@@ -341,43 +325,19 @@ namespace EPGVirtualization
             // Update visibility of program items
             UpdateVisibility();
         }
-        
 
-        private void OnProgramGridMouseMove(object sender, MouseEventArgs e)
+        private void _programGrid_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (_isDragging && _programGridScrollViewer != null)
+            if (e.LeftButton == MouseButtonState.Pressed)
             {
-                var currentPos = e.GetPosition(_programGrid);
-                var delta = _lastDragPosition.X - currentPos.X;
+                _programGrid.CaptureMouse();
+                _isDragging = true;
+                _lastDragPosition = e.GetPosition(_programGrid);
+                _lastPosition = _lastDragPosition; // Initialize position tracking
+                _lastMoveTime = DateTime.Now;      // Initialize time tracking
 
-                //Point currentPosition = e.GetPosition(this);
-
-                //// Only allow horizontal scrolling - remove vertical scrolling
-                double deltaX = currentPos.X - _lastDragPosition.X;
-
-                _horizontalOffset = Math.Max(0, _horizontalOffset - deltaX);
-                //// Vertical offset remains fixed during dragging
-
-                //// Update only X position, keep Y the same
-               // _lastMousePosition = new Point(currentPosition.X, _lastMousePosition.Y);
-
-                _programGridScrollViewer.ScrollToHorizontalOffset(_horizontalOffset);
-
-
-                //_programGridScrollViewer.ScrollToVerticalOffset(_programGridScrollViewer.VerticalOffset + delta.Y);
-
-                _lastDragPosition = currentPos;
-                e.Handled = true;
+                e.Handled = true; // Mark as handled to prevent event bubbling
             }
-        }
-        private void SmoothScroll(double newOffset)
-        {
-            DoubleAnimation animation = new DoubleAnimation(
-                _programGridScrollViewer.HorizontalOffset,
-                newOffset,
-                TimeSpan.FromMilliseconds(100));
-
-            _programGridScrollViewer.BeginAnimation(ScrollViewer.HorizontalOffsetProperty, animation);
         }
         private void OnProgramGridMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
@@ -385,9 +345,64 @@ namespace EPGVirtualization
             {
                 _isDragging = false;
                 _programGrid.ReleaseMouseCapture();
+                var currentPos = e.GetPosition(_programGrid);
+                double deltaX = currentPos.X - _lastDragPosition.X;
+
+                _horizontalOffset = Math.Max(0, _horizontalOffset - deltaX);
+
+                _lastDragPosition = currentPos;
+                // Sync the scrollviewer with our transform position
+                _programGridScrollViewer.ScrollToHorizontalOffset(_horizontalOffset);
+
+                _panTransform.X = 0; // Reset transform
+
                 e.Handled = true;
             }
         }
+        private DateTime _lastMoveTime = DateTime.MinValue;
+        private Point _lastPosition;
+        private const double MIN_MOVEMENT_DISTANCE = 1.0; // Minimum actual movement in pixels
+        private const int MIN_TIME_BETWEEN_EVENTS_MS = 8; // Throttle to ~60 fps
+
+        private void OnProgramGridMouseMove(object sender, MouseEventArgs e)
+        {
+            // 1. Throttle processing to avoid excessive events
+            TimeSpan timeSinceLastMove = DateTime.Now - _lastMoveTime;
+            if (timeSinceLastMove.TotalMilliseconds < MIN_TIME_BETWEEN_EVENTS_MS)
+            {
+                e.Handled = true;
+                return; // Skip processing if events are coming too fast
+            }
+
+            // 2. Ignore events that don't represent actual movement
+            Point currentPosition = e.GetPosition(_programGrid);
+            double distance = Math.Sqrt(
+                Math.Pow(currentPosition.X - _lastPosition.X, 2) +
+                Math.Pow(currentPosition.Y - _lastPosition.Y, 2));
+
+            if (distance < MIN_MOVEMENT_DISTANCE)
+            {
+                e.Handled = true;
+                return; // Skip processing if mouse hasn't actually moved enough
+            }
+
+            // 3. Now process the actual dragging logic
+            if (_isDragging && _programGridScrollViewer != null)
+            {
+                double deltaX = currentPosition.X - _lastDragPosition.X;
+                _horizontalOffset = Math.Max(0, _horizontalOffset - deltaX);
+                _programGridScrollViewer.ScrollToHorizontalOffset(_horizontalOffset);
+
+                // Update tracking variables
+                _lastDragPosition = currentPosition;
+                _lastPosition = currentPosition;
+                _lastMoveTime = DateTime.Now;
+            }
+
+            // 4. Mark event as handled to stop bubbling
+            e.Handled = true;
+        }
+
 
         private void OnProgramGridMouseWheel(object sender, MouseWheelEventArgs e)
         {
@@ -553,7 +568,7 @@ namespace EPGVirtualization
             DrawPrograms();
 
             // Draw current time marker
-            DrawCurrentTimeMarker();
+            //DrawCurrentTimeMarker();
 
             // Update what's visible
             UpdateVisibility();

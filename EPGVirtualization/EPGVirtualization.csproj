@@ -9,6 +9,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Controls\EPGVirtualizingPanel.cs" />
+    <Compile Remove="Converters\Converter.cs" />
+    <Compile Remove="Models\ProgramInfo.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Models\" />
   </ItemGroup>
 
