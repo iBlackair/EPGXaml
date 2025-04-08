@@ -281,11 +281,10 @@ namespace EPGVirtualization
                 if (_programGrid != null)
                 {
                     
-                    _programGrid.MouseMove += OnProgramGridMouseMove;
-                    _programGrid.MouseLeftButtonUp += OnProgramGridMouseLeftButtonUp;
-                    //_programGrid.MouseWheel += OnProgramGridMouseWheel;
+
+                    _programGrid.MouseWheel += OnProgramGridMouseWheel;
                     //_programGrid.MouseLeftButtonDown += OnProgramGridMouseLeftButtonDown;
-                    _programGrid.PreviewMouseDown += _programGrid_PreviewMouseDown; ;
+                    //_programGrid.PreviewMouseDown += _programGrid_PreviewMouseDown; ;
                 }
             }
             // Start timer for current time marker
@@ -303,22 +302,7 @@ namespace EPGVirtualization
             }
         }
 
-        private void _programGrid_PreviewMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            Trace.WriteLine($"MouseDown triggered: Left={e.LeftButton}, Right={e.RightButton}");
-            if (e.LeftButton == MouseButtonState.Pressed)
-            {
-                // Capture the mouse to allow dragging
-                _programGrid.CaptureMouse();
-                _lastDragPosition = e.GetPosition(_programGrid);
-                _isDragging = true;
-                //_programGrid.ReleaseMouseCapture();
-            }
-            else if (e.RightButton == MouseButtonState.Pressed)
-            {
 
-            }
-        }
 
 
         // Alternative implementation for more efficient scrolling
@@ -370,24 +354,6 @@ namespace EPGVirtualization
                 e.Handled = true;
             }
         }
-        private void SmoothScroll(double newOffset)
-        {
-            DoubleAnimation animation = new DoubleAnimation(
-                _programGridScrollViewer.HorizontalOffset,
-                newOffset,
-                TimeSpan.FromMilliseconds(100));
-
-            _programGridScrollViewer.BeginAnimation(ScrollViewer.HorizontalOffsetProperty, animation);
-        }
-        private void OnProgramGridMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            if (_isDragging)
-            {
-                _isDragging = false;
-                _programGrid.ReleaseMouseCapture();
-                e.Handled = true;
-            }
-        }
 
         private void OnProgramGridMouseWheel(object sender, MouseWheelEventArgs e)
         {
@@ -406,9 +372,19 @@ namespace EPGVirtualization
                 {
                     // Calculate new offset to keep mouse over same time point
                     var newOffset = (timeOffset * PixelsPerMinute * Zoom) - (mousePos.X - ChannelLabelWidth);
-                    //_programGridScrollViewer.ScrollToHorizontalOffset(Math.Max(0, newOffset));
+                    _programGridScrollViewer.ScrollToHorizontalOffset(Math.Max(0, newOffset));
                 }
 
+                e.Handled = true;
+            }
+            else if (Keyboard.Modifiers == ModifierKeys.Shift)
+            {
+                var zoom = 60 * PixelsPerMinute * Zoom;
+                double scrollAmount = e.Delta > 0 ? zoom * -1 : zoom; // Adjust the value as needed for scroll sensitivity
+                //double scrollAmount = e.Delta > 0 ? time : 500; // Adjust the value as needed for scroll sensitivity
+                double newOffset = _programGridScrollViewer.HorizontalOffset + scrollAmount;
+                newOffset = Math.Max(0, newOffset); // Prevent scrolling past the beginning
+                _programGridScrollViewer.ScrollToHorizontalOffset(newOffset);
                 e.Handled = true;
             }
         }

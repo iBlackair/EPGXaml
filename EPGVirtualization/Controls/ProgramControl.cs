@@ -12,12 +12,12 @@ namespace EPGVirtualization.Controls
     public class ProgramControl : Control
     {
         // First program color set
-        private static readonly SolidColorBrush Color1Selected = new(Color.FromRgb(18, 18, 20)); // Cornflower Blue
-        private static readonly SolidColorBrush Color1Normal = new(Color.FromRgb(38, 38, 38));   // Light blue
+        private static readonly SolidColorBrush Color1Selected = new(Color.FromRgb(85,85,85)); // Cornflower Blue
+        private static readonly SolidColorBrush Color1Normal = new(Color.FromRgb(60, 60, 60));   // Light blue
 
         // Second program color set (alternating)
-        private static readonly SolidColorBrush Color2Normal = new(Color.FromRgb(85, 85, 85));   // Steel Blue
-        private static readonly SolidColorBrush Color2Selected = new(Color.FromRgb(63, 63, 65));   // Light Steel Blue
+        private static readonly SolidColorBrush Color2Normal = new(Color.FromRgb(48, 0, 104));   // Steel Blue
+        private static readonly SolidColorBrush Color2Selected = new(Color.FromRgb(102, 0, 170));   // Light Steel Blue
 
         // Property to determine whether this is an "odd" program in the sequence
         public bool IsAlternatingProgram { get; set; }
