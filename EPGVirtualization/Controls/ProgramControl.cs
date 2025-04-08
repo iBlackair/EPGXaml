@@ -1,4 +1,5 @@
-﻿using System.Windows.Controls;
+﻿using System;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -12,15 +13,23 @@ namespace EPGVirtualization.Controls
     public class ProgramControl : Control
     {
         // First program color set
-        private static readonly SolidColorBrush Color1Selected = new(Color.FromRgb(85,85,85)); // Cornflower Blue
-        private static readonly SolidColorBrush Color1Normal = new(Color.FromRgb(60, 60, 60));   // Light blue
+        private static readonly SolidColorBrush Color1Selected = new(Color.FromRgb(85, 85, 85));
+        private static readonly SolidColorBrush Color1Normal = new(Color.FromRgb(60, 60, 60));
 
         // Second program color set (alternating)
-        private static readonly SolidColorBrush Color2Normal = new(Color.FromRgb(48, 0, 104));   // Steel Blue
-        private static readonly SolidColorBrush Color2Selected = new(Color.FromRgb(102, 0, 170));   // Light Steel Blue
+        private static readonly SolidColorBrush Color2Normal = new(Color.FromRgb(48, 0, 104));
+        private static readonly SolidColorBrush Color2Selected = new(Color.FromRgb(102, 0, 170));
+
+        // New brush for currently airing programs
+        private static readonly SolidColorBrush CurrentlyAiringBrush = new(Color.FromRgb(58, 120, 69)); // Green color
 
         // Property to determine whether this is an "odd" program in the sequence
         public bool IsAlternatingProgram { get; set; }
+
+        // UI elements
+        private TextBlock _titleBlock;
+        private TextBlock _timeBlock;
+        private Border _border;
 
         static ProgramControl()
         {
@@ -45,6 +54,16 @@ namespace EPGVirtualization.Controls
             Template = CreateDefaultTemplate();
         }
 
+        public override void OnApplyTemplate()
+        {
+            base.OnApplyTemplate();
+
+            // Get template parts
+            _border = GetTemplateChild("Border") as Border;
+            _titleBlock = GetTemplateChild("TitleBlock") as TextBlock;
+            _timeBlock = GetTemplateChild("TimeBlock") as TextBlock;
+        }
+
         private ControlTemplate CreateDefaultTemplate()
         {
             // Create a template with TextBlocks for title and time
@@ -55,7 +74,7 @@ namespace EPGVirtualization.Controls
             factory.SetValue(SnapsToDevicePixelsProperty, true);
             factory.SetValue(RenderOptions.EdgeModeProperty, EdgeMode.Aliased);
 
-            var backgroundBinding = new System.Windows.Data.Binding("Background");
+            var backgroundBinding = new Binding("Background");
             backgroundBinding.RelativeSource = new RelativeSource(RelativeSourceMode.TemplatedParent);
             factory.SetBinding(Border.BackgroundProperty, backgroundBinding);
 
@@ -64,16 +83,18 @@ namespace EPGVirtualization.Controls
             factory.AppendChild(panel);
 
             var titleBlock = new FrameworkElementFactory(typeof(TextBlock));
+            titleBlock.Name = "TitleBlock";
             titleBlock.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold);
             titleBlock.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
-            titleBlock.SetValue(TextBlock.ForegroundProperty, new SolidColorBrush(Color.FromRgb(194,194,194)));
-            titleBlock.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding("Title"));
+            titleBlock.SetValue(TextBlock.ForegroundProperty, new SolidColorBrush(Color.FromRgb(194, 194, 194)));
+            titleBlock.SetBinding(TextBlock.TextProperty, new Binding("Title"));
             panel.AppendChild(titleBlock);
 
             var timeBlock = new FrameworkElementFactory(typeof(TextBlock));
+            timeBlock.Name = "TimeBlock";
             timeBlock.SetValue(TextBlock.FontSizeProperty, 10.0);
             timeBlock.SetValue(TextBlock.ForegroundProperty, Brushes.DarkGray);
-            timeBlock.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding("StartTime") { StringFormat = "{0:HH:mm}" });
+            timeBlock.SetBinding(TextBlock.TextProperty, new Binding("StartTime") { StringFormat = "{0:HH:mm}" });
             panel.AppendChild(timeBlock);
 
             return new ControlTemplate(typeof(ProgramControl)) { VisualTree = factory };
@@ -81,18 +102,58 @@ namespace EPGVirtualization.Controls
 
         public void UpdateStyle(bool isSelected)
         {
+            // Check if program is currently airing
+            bool isCurrentlyAiring = IsCurrentlyAiring();
+
+            // Set border based on selection state
             BorderThickness = isSelected ? new Thickness(2) : new Thickness(1);
             BorderBrush = isSelected ? Brushes.DarkBlue : Brushes.SlateGray;
 
-            // Set background based on alternating flag and selection state
-            if (isSelected)
+            // Prioritize currently airing status over other styling
+            if (isCurrentlyAiring)
             {
-                Background = IsAlternatingProgram ? Color2Selected : Color1Selected;
+                // Use the currently airing brush
+                Background = CurrentlyAiringBrush;
+
+                // Make border more noticeable for currently airing programs
+                BorderBrush = Brushes.LightGreen;
+
+                // Update text style if we have access to the TextBlocks
+                if (_titleBlock != null)
+                {
+                    _titleBlock.FontWeight = FontWeights.Bold;
+                    _titleBlock.Foreground = Brushes.White;
+                }
             }
             else
             {
-                Background = IsAlternatingProgram ? Color2Normal : Color1Normal;
+                // Regular styling based on selection and alternation
+                if (isSelected)
+                {
+                    Background = IsAlternatingProgram ? Color2Selected : Color1Selected;
+                }
+                else
+                {
+                    Background = IsAlternatingProgram ? Color2Normal : Color1Normal;
+                }
+
+                // Reset title style if not currently airing
+                if (_titleBlock != null)
+                {
+                    _titleBlock.FontWeight = FontWeights.SemiBold;
+                    _titleBlock.Foreground = new SolidColorBrush(Color.FromRgb(194, 194, 194));
+                }
             }
+        }
+
+        public bool IsCurrentlyAiring()
+        {
+            if (DataContext is ProgramInfo program)
+            {
+                var now = DateTime.Now;
+                return now >= program.StartTime && now < program.StartTime.Add(program.Duration);
+            }
+            return false;
         }
     }
 }

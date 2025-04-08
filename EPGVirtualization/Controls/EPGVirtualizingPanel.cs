@@ -71,6 +71,12 @@ namespace EPGVirtualization
                 typeof(double),
                 typeof(EPGCanvas),
                 new PropertyMetadata(40.0));
+        public static readonly DependencyProperty CurrentAiringProgramBrushProperty =
+            DependencyProperty.Register(
+                "CurrentAiringProgramBrush",
+                typeof(Brush),
+                typeof(EPGCanvas),
+                new PropertyMetadata(new SolidColorBrush(Color.FromRgb(71, 123, 184))));
 
         public List<ProgramInfo> Programs
         {
@@ -114,6 +120,12 @@ namespace EPGVirtualization
             set => SetValue(TimelineHeightProperty, value);
         }
 
+        public Brush CurrentAiringProgramBrush
+        {
+            get => (Brush)GetValue(CurrentAiringProgramBrushProperty);
+            set => SetValue(CurrentAiringProgramBrushProperty, value);
+        }
+
         #endregion
 
         #region Events
@@ -131,7 +143,8 @@ namespace EPGVirtualization
         private List<ProgramControl> _programControls = new List<ProgramControl>();
         private Dictionary<int, List<ProgramInfo>> _programsByChannel = new Dictionary<int, List<ProgramInfo>>();
         private List<ChannelRow> _channelRows = new List<ChannelRow>();
-        
+        private DispatcherTimer _programUpdateTimer;
+
         private double _horizontalOffset = 0;
         private double _verticalOffset = 0;
         private Point _lastDragPosition;
@@ -148,7 +161,12 @@ namespace EPGVirtualization
         public EPGCanvas()
         {
             Loaded += OnLoaded;
+            Unloaded += OnUnloaded;     
+            InitializeProgramUpdateTimer();
         }
+
+        
+
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             if (Programs != null)
@@ -159,6 +177,14 @@ namespace EPGVirtualization
                 Dispatcher.BeginInvoke(new Action(() => {
                     UpdateLayout();
                 }), DispatcherPriority.Loaded);
+            }
+        }
+        private void OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            // Stop the timer to prevent memory leaks
+            if (_programUpdateTimer != null)
+            {
+                _programUpdateTimer.Stop();
             }
         }
 
@@ -784,6 +810,29 @@ namespace EPGVirtualization
                 _programGrid.Children.Add(line);
             }
         }
+
+        private void InitializeProgramUpdateTimer()
+        {
+            _programUpdateTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(30) // Update every 30 seconds
+            };
+
+            _programUpdateTimer.Tick += (s, e) =>
+            {
+                // Update all program controls to refresh "currently airing" status
+                foreach (var control in _programControls)
+                {
+                    if (control.DataContext is ProgramInfo p)
+                    {
+                        control.UpdateStyle(p == _selectedProgram);
+                    }
+                }
+            };
+
+            _programUpdateTimer.Start();
+        }
+
         private void UpdateTimelinePosition()
         {
             if (_timelineCanvas != null)

@@ -23,7 +23,7 @@ namespace EPGVirtualization
         private void EPGControl_ProgramSelected(object sender, ProgramInfo program)
         {
             // Handle program selection
-            //MessageBox.Show($"Selected: {program.Title} at {program.StartTime:HH:mm}");
+            MessageBox.Show($"Selected: {program.Title} at {program.StartTime:HH:mm}");
         }
 
         private List<ProgramInfo> GenerateSamplePrograms()
