@@ -1,66 +1,289 @@
-﻿using System;
+﻿using EPGVirtualization.Classes;
+using EPGVirtualization.Models;
+using LibVLCSharp.Shared;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Windows;
+using System.Windows.Media;
+using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 
 namespace EPGVirtualization
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window, INotifyPropertyChanged
     {
+        private LibVLC _libVLC;
+        private MediaPlayer _mediaPlayer;
+        private System.Windows.Threading.DispatcherTimer _updateTimer;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private ProgramInfo _selectedProgram = new ProgramInfo();
+        private ProgramInfo SelectedProgram 
+        { 
+            get => _selectedProgram;
+            set
+            {
+                _selectedProgram = value;
+                //controlPanel.UpdateTime(_selectedProgram.StartTime, _selectedProgram.Duration);
+                OnPropertyChanged(nameof(_selectedProgram)); 
+            } 
+        }
+
+        private void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
         public MainWindow()
         {
             // Make sure to add the style resources in App.xaml or MainWindow.xaml
             InitializeComponent();
 
-            // Generate sample data
-            var programs = GenerateSamplePrograms();
-            // Set the data for our EPG control
-            EPGControl.SetPrograms(programs);
+            // Initialize LibVLC and create a media player
+            Core.Initialize(); // Important: Initialize the VLC engine
 
-            // Log information to debug
-            Console.WriteLine($"Created {programs.Count} programs");
+            _libVLC = new LibVLC();
+            _mediaPlayer = new MediaPlayer(_libVLC);
+            _mediaPlayer.Volume = 0; // Set default volume to 100%
+            // Connect the VideoView with the MediaPlayer
+            VideoView.MediaPlayer = _mediaPlayer;
+
+            InitializeAsync();
+            // Set up the control panel events
+            SetupControlPanel();
+
+            // Create a timer to update the UI from LibVLC state
+            _updateTimer = new System.Windows.Threading.DispatcherTimer();
+            _updateTimer.Interval = TimeSpan.FromMilliseconds(1);
+            _updateTimer.Tick += UpdateTimer_Tick;
+
+            // Start the timer
+            _updateTimer.Start();
+            // Handle window closing to properly dispose resources
+            Closing += MainWindow_Closing;
+
+            // Optional: Load a media file when the application starts
+             LoadMedia("http://11.troya.info:34000/ch2452/mono.m3u8?token=mrgold.Kj3afDUEcHu1PHn46lO-gmvsX6SeBaNDIaqlbosizMegtK_457uo3YE-MwcQ-LHT");
+            // Initialize asynchronously - can't use await directly in constructor
+            
+        }
+        //private bool _isFullscreen = true;
+        //private void ToggleFullscreen_Click(object sender, RoutedEventArgs e)
+        //{
+        //    _isFullscreen = !_isFullscreen;
+
+        //    if (_isFullscreen)
+        //    {
+        //        // Show only video
+        //        EPGRow.Height = new GridLength(0);
+        //        SideColumn.Width = new GridLength(0);
+        //        //MenuBorder.Visibility = Visibility.Collapsed;
+        //        EPGBorder.Visibility = Visibility.Collapsed;
+        //        this.WindowState = WindowState.Normal;
+        //    }
+        //    else
+        //    {
+        //        // Show all components
+        //        EPGRow.Height = new GridLength(1, GridUnitType.Star);
+        //        SideColumn.Width = new GridLength(1.1, GridUnitType.Star);
+        //        EPGBorder.Visibility = Visibility.Visible;
+        //        this.WindowState = WindowState.Maximized;
+        //    }
+        //}
+
+        private void SetupControlPanel()
+        {
+            // Play/Pause
+            controlPanel.PlayPauseClicked += (s, e) => {
+                if (_mediaPlayer.IsPlaying)
+                    _mediaPlayer.Pause();
+                else
+                    _mediaPlayer.Play();
+            };
+
+            // Volume
+            controlPanel.VolumeChanged += (s, volume) => {
+                _mediaPlayer.Volume = (int)volume;
+            };
+
+            controlPanel.MuteToggleClicked += (s, e) => {
+                _mediaPlayer.Mute = !_mediaPlayer.Mute;
+            };
+
+
+            // Fullscreen
+            controlPanel.FullScreenClicked += (s, e) => {
+                if (WindowStyle == WindowStyle.None)
+                {
+                    WindowStyle = WindowStyle.SingleBorderWindow;
+                    WindowState = WindowState.Normal;
+                }
+                else
+                {
+                    WindowStyle = WindowStyle.None;
+                    WindowState = WindowState.Maximized;
+                }
+            };
+
+            // Playback speed
+            controlPanel.PlaybackSpeedChanged += (s, speed) => {
+                _mediaPlayer.SetRate((float)speed);
+            };
+
+            // Initialize control panel state
+            controlPanel.IsPlaying = false;
+            controlPanel.IsMuted = false;
+            controlPanel.VolumeLevel = 75; // Default volume
+
+            //// Set buffer position (this would come from your streaming info)
+            //// For example, if you're 15 minutes into a 2-hour show and have 30 minutes buffered:
+            //double showProgressPercent = 12.5; // (15 / 120) * 100
+            //double bufferProgressPercent = 25.0; // ((15+30) / 120) * 100
+            //controlPanel.BufferPercentage = bufferProgressPercent;
         }
 
+        private void UpdateTimer_Tick(object sender, EventArgs e)
+        {
+            // Only update if we have media
+            if (_mediaPlayer.Media != null)
+            {
+                // Update position
+                //controlPanel.Position = _mediaPlayer.Position * 100;
+                if(_selectedProgram != null)
+                    controlPanel.UpdateTime(_selectedProgram.StartTime, _selectedProgram.StopTime);
+                // Update play state
+                controlPanel.IsPlaying = _mediaPlayer.IsPlaying;
+
+                // Update volume state
+                controlPanel.IsMuted = _mediaPlayer.Mute;
+                controlPanel.VolumeLevel = _mediaPlayer.Volume;
+            }
+        }
+        private void LoadMedia(string mediaPath)
+        {
+            // Create a new Media instance
+            using (var media = new Media(_libVLC, new Uri(mediaPath)))
+            {
+                // Assign the media to the player
+                _mediaPlayer.Media = media;
+                _mediaPlayer.NetworkCaching = 30 * 1000; // Set network caching to 1 second
+                // Auto-play if desired
+                _mediaPlayer.Play();
+            }
+        }
+        private void PlayButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_mediaPlayer.IsPlaying)
+            {
+                _mediaPlayer.Play();
+            }
+            else
+            {
+                _mediaPlayer.Pause();
+            }
+        }
+        private void PauseButton_Click(object sender, RoutedEventArgs e)
+        {
+            _mediaPlayer.Pause();
+        }
+        private void StopButton_Click(object sender, RoutedEventArgs e)
+        {
+            _mediaPlayer.Stop();
+        }
+        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // Clean up resources to prevent memory leaks
+            _mediaPlayer.Stop();
+            _mediaPlayer.Dispose();
+            _libVLC.Dispose();
+        }     
+        private async void InitializeAsync()
+        {
+            try
+            {
+                // Generate sample data
+                var parser = new EPGParserCore();
+
+                // Get channels
+                var channels = await parser.Parse();
+                //EPGRow.Height = new GridLength(0,GridUnitType.Pixel);
+                // Set the data for our EPG control
+                EPGControl.SetChannels(channels.ToList());
+                EPGControl.ScrollToCurrentTime();
+
+                // Log information to debug
+                Console.WriteLine($"Created {channels.Count} channels");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading EPG data: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                // Fallback to sample data if parsing fails
+                EPGControl.SetChannels(GenerateSampleChannels());
+            }
+        }
         private void EPGControl_ProgramSelected(object sender, ProgramInfo program)
         {
-            // Handle program selection
-            MessageBox.Show($"Selected: {program.Title} at {program.StartTime:HH:mm}");
+            var channel = EPGControl.Channels.FirstOrDefault(c => c.TvgName == program.Channel);
+            if (channel != null)
+            {
+                // Then find the program within that channel
+                var programItem = channel.Programs.FirstOrDefault(p => p.StartTime == program.StartTime);
+                if (programItem != null)
+                {
+                    // Now set the IsSelected property
+                    programItem.IsSelected = true;
+                    _selectedProgram = programItem;
+                    controlPanel.UpdateTime(_selectedProgram.StartTime, _selectedProgram.StopTime);
+                    LoadMedia(channel.TvgStreamLink.ToString());
+                }
+            }
         }
-
-        private List<ProgramInfo> GenerateSamplePrograms()
+        private List<ChannelInfo> GenerateSampleChannels()
         {
-            var programs = new List<ProgramInfo>();
+            var channels = new List<ChannelInfo>();
             var random = new Random(42); // Fixed seed for reproducible results
 
-            // Generate programs across 20 channels for 24 hours
+            // Generate channels
             for (int channelIndex = 0; channelIndex < 40; channelIndex++)
             {
-                DateTime currentTime = DateTime.Parse("2025/4/1 12:00:00"); ;
+                var channelInfo = new ChannelInfo
+                {
+                    TvgName = $"Channel {channelIndex + 1}",
+                    TvgLogo = null, // No logo for sample data
+                    TvgRec = random.Next(1, 8), // Random days of recording available
+                    TvgStreamLink = new Uri($"http://example.com/stream/{channelIndex}")
+                };
 
-                // Add programs until we fill the 24-hour period
-                while (currentTime < DateTime.Today.AddDays(13))
+                // Generate programs for this channel
+                DateTime currentTime = DateTime.Today;
+
+                // Add programs until we fill a 24-hour period
+                while (currentTime < DateTime.Today.AddDays(1))
                 {
                     // Random duration between 15 and 120 minutes, in 15-minute increments
                     int durationMinutes = random.Next(1, 8) * 15;
-                    var duration = TimeSpan.FromMinutes(durationMinutes);
+                    var stopTime = currentTime.AddMinutes(durationMinutes);
 
                     // Create program
                     var program = new ProgramInfo
                     {
-                        Title = $"Program {currentTime.Hour:00}:{currentTime.Minute:00} Ch{channelIndex + 1}",
+                        Channel = channelInfo.TvgName,
+                        Title = $"Program {currentTime.Hour:00}:{currentTime.Minute:00}",
                         StartTime = currentTime,
-                        Duration = duration,
-                        ChannelIndex = channelIndex
+                        StopTime = stopTime,
+                        Description = $"This is a sample program on {channelInfo.TvgName} starting at {currentTime:HH:mm} and ending at {stopTime:HH:mm}."
                     };
 
-                    programs.Add(program);
+                    channelInfo.Programs.Add(program);
 
                     // Move to next program
-                    currentTime = currentTime.AddMinutes(durationMinutes);
+                    currentTime = stopTime;
                 }
+
+                channels.Add(channelInfo);
             }
 
-            return programs;
+            return channels;
         }
-
     }
 }

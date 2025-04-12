@@ -1,18 +1,72 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 namespace EPGVirtualization
 {
+
     public class ProgramInfo : INotifyPropertyChanged
     {
-        private string _title = "";
+        private string _channel = string.Empty;
         private DateTime _startTime;
-        private TimeSpan _duration;
-        private int _channelIndex;
+        private DateTime _stopTime;
+        private string? _title;
+        private string? _description;
         private bool _isSelected;
 
-        public string Title
+        /// <summary>
+        /// Unique identifier for the program
+        /// </summary>
+        public string Channel
+        {
+            get => _channel;
+            set
+            {
+                if (_channel != value)
+                {
+                    _channel = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Start time of the program
+        /// </summary>
+        public DateTime StartTime
+        {
+            get => _startTime;
+            set
+            {
+                if (_startTime != value)
+                {
+                    _startTime = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(Duration));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Stop time of the program
+        /// </summary>
+        public DateTime StopTime
+        {
+            get => _stopTime;
+            set
+            {
+                if (_stopTime != value)
+                {
+                    _stopTime = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(Duration));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Program title
+        /// </summary>
+        public string? Title
         {
             get => _title;
             set
@@ -25,49 +79,25 @@ namespace EPGVirtualization
             }
         }
 
-        public DateTime StartTime
+        /// <summary>
+        /// Program description
+        /// </summary>
+        public string? Description
         {
-            get => _startTime;
+            get => _description;
             set
             {
-                if (_startTime != value)
+                if (_description != value)
                 {
-                    _startTime = value;
-                    OnPropertyChanged();
-                    OnPropertyChanged(nameof(EndTime));
-                }
-            }
-        }
-
-        public TimeSpan Duration
-        {
-            get => _duration;
-            set
-            {
-                if (_duration != value)
-                {
-                    _duration = value;
-                    OnPropertyChanged();
-                    OnPropertyChanged(nameof(EndTime));
-                }
-            }
-        }
-
-        public DateTime EndTime => StartTime.Add(Duration);
-
-        public int ChannelIndex
-        {
-            get => _channelIndex;
-            set
-            {
-                if (_channelIndex != value)
-                {
-                    _channelIndex = value;
+                    _description = value;
                     OnPropertyChanged();
                 }
             }
         }
 
+        /// <summary>
+        /// Flag indicating if this program is currently selected
+        /// </summary>
         public bool IsSelected
         {
             get => _isSelected;
@@ -81,9 +111,14 @@ namespace EPGVirtualization
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        /// <summary>
+        /// Calculated duration of the program
+        /// </summary>
+        public TimeSpan Duration => StopTime - StartTime;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

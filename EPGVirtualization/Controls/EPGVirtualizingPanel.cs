@@ -1,4 +1,5 @@
 ﻿using EPGVirtualization.Controls;
+using EPGVirtualization.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -23,12 +24,12 @@ namespace EPGVirtualization
     {
         #region Dependency Properties
 
-        public static readonly DependencyProperty ProgramsProperty =
+        public static readonly DependencyProperty ChannelsProperty =
             DependencyProperty.Register(
-                "Programs",
-                typeof(List<ProgramInfo>),
+                "Channels",
+                typeof(List<ChannelInfo>),
                 typeof(EPGCanvas),
-                new PropertyMetadata(null, OnProgramsChanged));
+                new PropertyMetadata(null, OnChannelsChanged));
 
         public static readonly DependencyProperty ViewStartTimeProperty =
             DependencyProperty.Register(
@@ -71,6 +72,7 @@ namespace EPGVirtualization
                 typeof(double),
                 typeof(EPGCanvas),
                 new PropertyMetadata(40.0));
+
         public static readonly DependencyProperty CurrentAiringProgramBrushProperty =
             DependencyProperty.Register(
                 "CurrentAiringProgramBrush",
@@ -78,10 +80,10 @@ namespace EPGVirtualization
                 typeof(EPGCanvas),
                 new PropertyMetadata(new SolidColorBrush(Color.FromRgb(71, 123, 184))));
 
-        public List<ProgramInfo> Programs
+        public List<ChannelInfo> Channels
         {
-            get => (List<ProgramInfo>)GetValue(ProgramsProperty);
-            set => SetValue(ProgramsProperty, value);
+            get => (List<ChannelInfo>)GetValue(ChannelsProperty);
+            set => SetValue(ChannelsProperty, value);
         }
 
         public DateTime ViewStartTime
@@ -141,7 +143,6 @@ namespace EPGVirtualization
         private Canvas _timelineCanvas;
         private StackPanel _channelPanel;
         private List<ProgramControl> _programControls = new List<ProgramControl>();
-        private Dictionary<int, List<ProgramInfo>> _programsByChannel = new Dictionary<int, List<ProgramInfo>>();
         private List<ChannelRow> _channelRows = new List<ChannelRow>();
         private DispatcherTimer _programUpdateTimer;
 
@@ -161,15 +162,13 @@ namespace EPGVirtualization
         public EPGCanvas()
         {
             Loaded += OnLoaded;
-            Unloaded += OnUnloaded;     
+            Unloaded += OnUnloaded;
             InitializeProgramUpdateTimer();
         }
 
-        
-
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            if (Programs != null)
+            if (Channels != null)
             {
                 UpdateChannelRows();
 
@@ -179,6 +178,7 @@ namespace EPGVirtualization
                 }), DispatcherPriority.Loaded);
             }
         }
+
         private void OnUnloaded(object sender, RoutedEventArgs e)
         {
             // Stop the timer to prevent memory leaks
@@ -204,7 +204,6 @@ namespace EPGVirtualization
             var channelScrollViewer = GetTemplateChild("PART_ChannelScrollViewer") as ScrollViewer;
             _channelPanel = GetTemplateChild("PART_ChannelPanel") as StackPanel;
 
-            // Wire up the date display click event
             // Wire up the date display click event
             if (GetTemplateChild("PART_DateDisplay") is TextBlock dateDisplay)
             {
@@ -237,6 +236,7 @@ namespace EPGVirtualization
                     };
                 }
             }
+
             if (GetTemplateChild("PART_DateButton") is Button dateButton)
             {
                 dateButton.Click += (s, e) =>
@@ -248,6 +248,7 @@ namespace EPGVirtualization
                     }
                 };
             }
+
             // Wire up the date picker selection event
             if (GetTemplateChild("PART_DatePicker") is DatePicker datePicker)
             {
@@ -263,6 +264,7 @@ namespace EPGVirtualization
                     UpdateLayout();
                 };
             }
+
             // Wire up the calendar selection event
             if (GetTemplateChild("PART_Calendar") is System.Windows.Controls.Calendar calendar)
             {
@@ -306,20 +308,17 @@ namespace EPGVirtualization
                 // Add mouse events to program grid for dragging
                 if (_programGrid != null)
                 {
-                    
-
                     _programGrid.MouseWheel += OnProgramGridMouseWheel;
-                    //_programGrid.MouseLeftButtonDown += OnProgramGridMouseLeftButtonDown;
-                    //_programGrid.PreviewMouseDown += _programGrid_PreviewMouseDown; ;
                 }
             }
+
             // Start timer for current time marker
             var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
             timer.Tick += (s, e) => DrawCurrentTimeMarker();
             timer.Start();
 
             // If we already have data, update the layout
-            if (Programs != null && Programs.Count > 0)
+            if (Channels != null && Channels.Count > 0)
             {
                 Dispatcher.BeginInvoke(new Action(() => {
                     UpdateChannelRows();
@@ -327,11 +326,6 @@ namespace EPGVirtualization
                 }), DispatcherPriority.Render);
             }
         }
-
-
-
-
-        // Alternative implementation for more efficient scrolling
 
         #endregion
 
@@ -351,36 +345,6 @@ namespace EPGVirtualization
             // Update visibility of program items
             UpdateVisibility();
         }
-        
-
-        private void OnProgramGridMouseMove(object sender, MouseEventArgs e)
-        {
-            if (_isDragging && _programGridScrollViewer != null)
-            {
-                var currentPos = e.GetPosition(_programGrid);
-                var delta = _lastDragPosition.X - currentPos.X;
-
-                //Point currentPosition = e.GetPosition(this);
-
-                //// Only allow horizontal scrolling - remove vertical scrolling
-                double deltaX = currentPos.X - _lastDragPosition.X;
-
-                _horizontalOffset = Math.Max(0, _horizontalOffset - deltaX);
-                //// Vertical offset remains fixed during dragging
-
-                //// Update only X position, keep Y the same
-               // _lastMousePosition = new Point(currentPosition.X, _lastMousePosition.Y);
-
-                _programGridScrollViewer.ScrollToHorizontalOffset(_horizontalOffset);
-
-
-                //_programGridScrollViewer.ScrollToVerticalOffset(_programGridScrollViewer.VerticalOffset + delta.Y);
-
-                _lastDragPosition = currentPos;
-                e.Handled = true;
-            }
-        }
-
         private void OnProgramGridMouseWheel(object sender, MouseWheelEventArgs e)
         {
             if (Keyboard.Modifiers == ModifierKeys.Control)
@@ -407,7 +371,6 @@ namespace EPGVirtualization
             {
                 var zoom = 60 * PixelsPerMinute * Zoom;
                 double scrollAmount = e.Delta > 0 ? zoom * -1 : zoom; // Adjust the value as needed for scroll sensitivity
-                //double scrollAmount = e.Delta > 0 ? time : 500; // Adjust the value as needed for scroll sensitivity
                 double newOffset = _programGridScrollViewer.HorizontalOffset + scrollAmount;
                 newOffset = Math.Max(0, newOffset); // Prevent scrolling past the beginning
                 _programGridScrollViewer.ScrollToHorizontalOffset(newOffset);
@@ -420,6 +383,7 @@ namespace EPGVirtualization
             if (sender is ProgramControl programControl)
             {
                 var program = programControl.DataContext as ProgramInfo;
+
                 if (program != null)
                 {
                     SelectProgram(program);
@@ -432,14 +396,9 @@ namespace EPGVirtualization
 
         #region Public Methods
 
-        public void SetChannels(List<ChannelRow> channels)
+        public void SetChannels(List<ChannelInfo> channels)
         {
-            // This method is not used in the current implementation
-            // but can be used to set channel information if needed
-        }
-        public void SetPrograms(List<ProgramInfo> programs)
-        {
-            Programs = programs;
+            Channels = channels;
         }
 
         public void SelectProgram(ProgramInfo program)
@@ -473,7 +432,7 @@ namespace EPGVirtualization
 
         #region Private Methods
 
-        private static void OnProgramsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        private static void OnChannelsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is EPGCanvas epg && epg.IsLoaded)
             {
@@ -494,31 +453,22 @@ namespace EPGVirtualization
 
         private void UpdateChannelRows()
         {
-            if (Programs == null || Programs.Count == 0)
+            if (Channels == null || Channels.Count == 0)
                 return;
 
-            // Group programs by channel
-            _programsByChannel.Clear();
-            foreach (var program in Programs)
-            {
-                if (!_programsByChannel.TryGetValue(program.ChannelIndex, out var channelPrograms))
-                {
-                    channelPrograms = new List<ProgramInfo>();
-                    _programsByChannel[program.ChannelIndex] = channelPrograms;
-                }
-                channelPrograms.Add(program);
-            }
-
-            // Create channel rows
+            // Create channel rows directly from channel info
             _channelRows.Clear();
-            foreach (var channelIndex in _programsByChannel.Keys.OrderBy(x => x))
+
+            for (int i = 0; i < Channels.Count; i++)
             {
+                var channelInfo = Channels[i];
+
                 _channelRows.Add(new ChannelRow
                 {
-                    ChannelIndex = channelIndex,
-                    ChannelLogo = null, // Placeholder for channel logo
-                    ChannelName = $"Channel {channelIndex + 1}",
-                    Programs = _programsByChannel[channelIndex].OrderBy(p => p.StartTime).ToList()
+                    ChannelIndex = i,
+                    ChannelLogo = channelInfo.TvgLogo,
+                    ChannelName = channelInfo.TvgName,
+                    Programs = channelInfo.Programs.OrderBy(p => p.StartTime).ToList()
                 });
             }
         }
@@ -677,8 +627,7 @@ namespace EPGVirtualization
                     Height = TimelineHeight,
                     Fill = new SolidColorBrush(Color.FromRgb(7, 7, 9)),
                     Stroke = Brushes.Gray,
-                    StrokeThickness = 1,
-                    
+                    StrokeThickness = 0.5,
                     HorizontalAlignment = HorizontalAlignment.Center
                 };
                 Canvas.SetLeft(rect, x);
@@ -691,7 +640,7 @@ namespace EPGVirtualization
                     FontSize = 14,
                     VerticalAlignment = VerticalAlignment.Center,
                 };
-                Canvas.SetLeft(text, x + rect.Width / 2 -17);
+                Canvas.SetLeft(text, x + rect.Width / 2 - 17);
                 Canvas.SetTop(text, 10);
                 _timelineCanvas.Children.Add(text);
 
@@ -719,6 +668,7 @@ namespace EPGVirtualization
             // Define alternating background colors for channel rows
             var evenRowBrush = new SolidColorBrush(Color.FromRgb(22, 22, 22)); // Light blue-gray
             var oddRowBrush = new SolidColorBrush(Color.FromRgb(22, 22, 22));  // Slightly darker blue-gray
+
             for (int i = 0; i < _channelRows.Count; i++)
             {
                 var channel = _channelRows[i];
@@ -726,13 +676,14 @@ namespace EPGVirtualization
                 var isEvenRow = i % 2 == 0;
                 var rowBrush = isEvenRow ? evenRowBrush : oddRowBrush;
                 var rowHeight = Math.Floor(ChannelHeight * Zoom); // Ensure whole pixel values
+
                 var label = new Border
                 {
                     Width = Math.Floor(ChannelLabelWidth), // Ensure whole pixel values
                     Height = rowHeight,
                     BorderBrush = Brushes.Gray,
                     BorderThickness = new Thickness(0, 0, 0, 1),
-                    Background = new SolidColorBrush(Color.FromRgb(7,7,9))                    
+                    Background = new SolidColorBrush(Color.FromRgb(7, 7, 9))
                 };
 
                 // Create a StackPanel to hold both the image and text horizontally
@@ -751,7 +702,7 @@ namespace EPGVirtualization
                     Background = Brushes.Transparent
                 };
 
-                // Create an Image control (you can set the Source property later)
+                // Create an Image control
                 var image = new Image
                 {
                     Stretch = Stretch.Uniform
@@ -765,7 +716,7 @@ namespace EPGVirtualization
                     Text = channel.ChannelName,
                     VerticalAlignment = VerticalAlignment.Center,
                     FontWeight = FontWeights.SemiBold,
-                    Foreground = new SolidColorBrush(Color.FromRgb(188,188,186)),
+                    Foreground = new SolidColorBrush(Color.FromRgb(188, 188, 186)),
                 };
 
                 // Add both to the stack panel
@@ -778,6 +729,7 @@ namespace EPGVirtualization
                 _channelPanel.Children.Add(label);
             }
         }
+
         private void DrawCurrentTimeMarker()
         {
             // Remove existing marker
@@ -794,7 +746,6 @@ namespace EPGVirtualization
             if (now.Date == ViewStartTime.Date)
             {
                 var x = (now - ViewStartTime).TotalMinutes * PixelsPerMinute * Zoom;
-
                 // Draw current time line
                 var line = new System.Windows.Shapes.Line
                 {
@@ -803,7 +754,7 @@ namespace EPGVirtualization
                     X2 = x,
                     Y2 = _programGrid.Height,
                     Stroke = Brushes.Red,
-                    StrokeThickness = 2,
+                    StrokeThickness = 1,
                     Tag = "CurrentTime"
                 };
 
@@ -811,11 +762,22 @@ namespace EPGVirtualization
             }
         }
 
+        public void ScrollToCurrentTime()
+        {
+            // Scroll to the current time
+            var now = DateTime.Now;
+            if (now.Date == ViewStartTime.Date)
+            {
+                var x = (now - ViewStartTime).TotalMinutes * PixelsPerMinute * Zoom;
+                _programGridScrollViewer.ScrollToHorizontalOffset(x - (PixelsPerMinute * 10));
+            }
+        }
+
         private void InitializeProgramUpdateTimer()
         {
             _programUpdateTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(30) // Update every 30 seconds
+                Interval = TimeSpan.FromSeconds(1) // Update every 30 seconds
             };
 
             _programUpdateTimer.Tick += (s, e) =>
@@ -842,6 +804,7 @@ namespace EPGVirtualization
                 Canvas.SetTop(_timelineCanvas, 0); // Explicitly set top to 0
             }
         }
+
         private void UpdateChannelListPosition()
         {
             if (_channelPanel != null)
@@ -855,6 +818,7 @@ namespace EPGVirtualization
                 }
             }
         }
+
         private void UpdateVisibility()
         {
             // Optimize by only showing controls that are potentially visible
@@ -874,6 +838,7 @@ namespace EPGVirtualization
                 control.Visibility = visibleRect.IntersectsWith(bounds) ? Visibility.Visible : Visibility.Collapsed;
             }
         }
+
         #endregion
 
         #region Helper Classes
@@ -888,7 +853,4 @@ namespace EPGVirtualization
 
         #endregion
     }
-
-    
-    
 }

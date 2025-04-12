@@ -1,5 +1,4 @@
-﻿using System;
-using System.Windows.Controls;
+﻿using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -151,7 +150,7 @@ namespace EPGVirtualization.Controls
             if (DataContext is ProgramInfo program)
             {
                 var now = DateTime.Now;
-                return now >= program.StartTime && now < program.StartTime.Add(program.Duration);
+                return now >= program.StartTime && now < program.StopTime;
             }
             return false;
         }

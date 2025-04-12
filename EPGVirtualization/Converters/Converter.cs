@@ -1,4 +1,7 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Windows.Data;
 using System.Windows;
 using System.Windows.Media;
@@ -19,32 +22,20 @@ namespace EPGVirtualization.Converters
         private static readonly SolidColorBrush Color2Normal = new SolidColorBrush(Color.FromRgb(19, 20, 22));   // Light Steel Blue
 
         // Dictionary to track program alternation by channel
-        private static Dictionary<int, Dictionary<DateTime, bool>> _alternatingState = new Dictionary<int, Dictionary<DateTime, bool>>();
+        private static Dictionary<string, Dictionary<DateTime, bool>> _alternatingState = new Dictionary<string, Dictionary<DateTime, bool>>();
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             bool isSelected = value is bool boolValue && boolValue;
 
-            // Check if we have the alternating flag from the ProgramControl
-            //if (parameter is bool isAlternating)
-            //{
-            //    if (isSelected)
-            //    {
-            //        return isAlternating ? Color2Selected : Color1Selected;
-            //    }
-            //    else
-            //    {
-            //        return isAlternating ? Color2Normal : Color1Normal;
-            //    }
-            //}
             // Default fallback if no alternating info
             if (parameter is ProgramInfo program)
             {
                 // Get or create alternating tracking for this channel
-                if (!_alternatingState.TryGetValue(program.ChannelIndex, out var channelState))
+                if (!_alternatingState.TryGetValue(program.Channel, out var channelState))
                 {
                     channelState = new Dictionary<DateTime, bool>();
-                    _alternatingState[program.ChannelIndex] = channelState;
+                    _alternatingState[program.Channel] = channelState;
                 }
 
                 // Get or determine alternating state for this program
@@ -52,7 +43,7 @@ namespace EPGVirtualization.Converters
                 {
                     // Determine based on position in the sequence
                     var programsList = _alternatingState.Keys
-                        .Where(k => k == program.ChannelIndex)
+                        .Where(k => k == program.Channel)
                         .SelectMany(k => _alternatingState[k].Keys)
                         .OrderBy(dt => dt)
                         .ToList();

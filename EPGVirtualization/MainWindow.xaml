@@ -4,37 +4,73 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:EPGVirtualization"
+        xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
         mc:Ignorable="d"
-        Title="EPG Viewer" Height="600" Width="1000">
+        Title="EPG Viewer" Height="900" Width="1600">
     <Grid>
-        <!--<Grid.RowDefinitions>
-            <RowDefinition Height="1*" />
-            <RowDefinition Height="1*" />
+        <Grid.RowDefinitions>
+            <RowDefinition Height="20" />
+            <!-- Menu -->
+            <RowDefinition Height="Auto" />
+            <!-- VideoView will determine its height -->
+            <RowDefinition  Height="*" />
+            <!-- EPGControl takes remaining space -->
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="1*" />
-            <ColumnDefinition Width="1*" />
-        </Grid.ColumnDefinitions>-->
-        <!--<Border Background="Black">
-            
-        </Border>
-        <Border Background="Black" Grid.Column="0" BorderThickness="0,0,1,0" BorderBrush="White">
-            <TextBlock Text="Program Discription PlaceHolder" Foreground="White" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Border>
-        <Border Background="Black" Grid.Column="1" Grid.ColumnSpan="2">
-            <TextBlock Text="VlC Player PlaceHolder" Foreground="White" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Border>-->
+            <ColumnDefinition Width="1.1*" />
+            <ColumnDefinition Width="1.7778*" />
+            <!-- 16:9 ratio relative to row height -->
+        </Grid.ColumnDefinitions>
 
-        <local:EPGCanvas x:Name="EPGControl"
-                     ViewStartTime="{Binding Today}" 
-                     ChannelHeight="40"
-                     ChannelLabelWidth="100"
-                     TimelineHeight="40"
-                     PixelsPerMinute="3"
-                     Zoom="1.0"
-                     ProgramSelected="EPGControl_ProgramSelected" Grid.Row="2" Grid.ColumnSpan="2" Grid.RowSpan="2" />
+        <!-- Main window border -->
+
+
+        <!-- Menu with border -->
+        <Border Grid.Row="0" Grid.ColumnSpan="2" BorderBrush="Gray" BorderThickness=".6">
+            <Menu>
+                <MenuItem Header="_File">
+                    <MenuItem Header="New" />
+                    <MenuItem Header="Open" />
+                    <MenuItem Header="Exit" />
+                </MenuItem>
+                <MenuItem Header="_Edit">
+                    <MenuItem Header="Undo" />
+                    <MenuItem Header="Redo" />
+                </MenuItem>
+                <MenuItem Header="_View">
+                    <MenuItem Header="Zoom In" />
+                    <MenuItem Header="Zoom Out" />
+                </MenuItem>
+            </Menu>
+        </Border>
+        <!-- Video panel with border -->
+        <Border Grid.Row="1" Grid.RowSpan="1" Grid.Column="1" BorderThickness=".6" BorderBrush="LightBlue" Panel.ZIndex="1">
+            <Viewbox Stretch="UniformToFill">
+                <Border x:Name="border" Width="1600" Height="900">
+                    <vlc:VideoView x:Name="VideoView">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom"  Grid.Row="1" Grid.Column="1" Width="1600" Height="100">
+                            <local:VideoControl x:Name="controlPanel" 
+                                 VerticalAlignment="Bottom"
+                                 Panel.ZIndex="5" Width="1600"/>
+                        </StackPanel>
+                    </vlc:VideoView>
+                </Border>
+            </Viewbox>
+        </Border>
+
+
+
+        <!-- EPG panel with border -->
+        <Border Grid.Row="2" Grid.ColumnSpan="2" BorderThickness="0,0.6,0,0.6" BorderBrush="Gray" >
+            <local:EPGCanvas x:Name="EPGControl"
+                         ViewStartTime="{Binding Today}" 
+                         ChannelHeight="40"
+                         ChannelLabelWidth="200"
+                         TimelineHeight="40"
+                         PixelsPerMinute="3"
+                         Zoom="0.9"
+                         ProgramSelected="EPGControl_ProgramSelected"
+                          />
+        </Border>
     </Grid>
-
-    <!-- EPG Control fills the window -->
-
 </Window>
