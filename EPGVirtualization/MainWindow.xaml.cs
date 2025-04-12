@@ -1,4 +1,5 @@
 ﻿using EPGVirtualization.Classes;
+using EPGVirtualization.Classes.EPGVirtualization;
 using EPGVirtualization.Models;
 using LibVLCSharp.Shared;
 using System;
@@ -6,6 +7,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Threading;
 using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 
 namespace EPGVirtualization
@@ -15,6 +17,8 @@ namespace EPGVirtualization
         private LibVLC _libVLC;
         private MediaPlayer _mediaPlayer;
         private System.Windows.Threading.DispatcherTimer _updateTimer;
+        private AspectRatioEnforcer _videoAspectRatioEnforcer;
+        private bool _isResizing = false;
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private ProgramInfo _selectedProgram = new ProgramInfo();
@@ -51,9 +55,12 @@ namespace EPGVirtualization
             InitializeAsync();
             // Set up the control panel events
             SetupControlPanel();
+            this.StateChanged += MainWindow_StateChanged;
+            this.Loaded += MainWindow_Loaded;
 
-            // Create a timer to update the UI from LibVLC state
-            _updateTimer = new System.Windows.Threading.DispatcherTimer();
+
+        // Create a timer to update the UI from LibVLC state
+        _updateTimer = new System.Windows.Threading.DispatcherTimer();
             _updateTimer.Interval = TimeSpan.FromMilliseconds(1);
             _updateTimer.Tick += UpdateTimer_Tick;
 
@@ -67,29 +74,65 @@ namespace EPGVirtualization
             // Initialize asynchronously - can't use await directly in constructor
             
         }
-        //private bool _isFullscreen = true;
-        //private void ToggleFullscreen_Click(object sender, RoutedEventArgs e)
-        //{
-        //    _isFullscreen = !_isFullscreen;
 
-        //    if (_isFullscreen)
-        //    {
-        //        // Show only video
-        //        EPGRow.Height = new GridLength(0);
-        //        SideColumn.Width = new GridLength(0);
-        //        //MenuBorder.Visibility = Visibility.Collapsed;
-        //        EPGBorder.Visibility = Visibility.Collapsed;
-        //        this.WindowState = WindowState.Normal;
-        //    }
-        //    else
-        //    {
-        //        // Show all components
-        //        EPGRow.Height = new GridLength(1, GridUnitType.Star);
-        //        SideColumn.Width = new GridLength(1.1, GridUnitType.Star);
-        //        EPGBorder.Visibility = Visibility.Visible;
-        //        this.WindowState = WindowState.Maximized;
-        //    }
-        //}
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Create an aspect ratio enforcer for the video view container
+            // You might need to adjust which element needs the aspect ratio enforced
+            // depending on your exact layout
+
+            // Option 1: If using the ViewBox approach in XAML:
+            // The ViewBox handles the aspect ratio automatically
+
+            // Option 2: If not using ViewBox, create an AspectRatioEnforcer:
+            // Find the container Grid that holds the VideoView (adjust as needed)
+            var videoContainer = VideoView.Parent as FrameworkElement;
+            if (videoContainer != null)
+            {
+                // Create enforcer with 16:9 aspect ratio (width/height = 1.7778)
+                _videoAspectRatioEnforcer = new AspectRatioEnforcer(videoContainer, 16.0 / 9.0);
+            }
+        }
+
+        private void MainWindow_StateChanged(object sender, EventArgs e)
+        {
+            // When maximizing or restoring, handle the transition smoothly
+            if (this.WindowState == WindowState.Maximized || this.WindowState == WindowState.Normal)
+            {
+                _isResizing = true;
+
+                // Temporarily hide control panel during transition
+                if (controlPanel != null)
+                {
+                    // Store visibility state
+                    var controlVisibility = controlPanel.Visibility;
+
+                    // Hide during transition
+                    controlPanel.Visibility = Visibility.Collapsed;
+
+                    // Restore after animation completes
+                    var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+                    timer.Tick += (s, args) =>
+                    {
+                        controlPanel.Visibility = controlVisibility;
+                        _isResizing = false;
+                        timer.Stop();
+
+                        // Ensure the aspect ratio is maintained
+                        if (_videoAspectRatioEnforcer != null)
+                        {
+                            var videoContainer = VideoView.Parent as FrameworkElement;
+                            if (videoContainer != null)
+                            {
+                                // Manually trigger a size change to update aspect ratio
+                                videoContainer.InvalidateMeasure();
+                            }
+                        }
+                    };
+                    timer.Start();
+                }
+            }
+        }
 
         private void SetupControlPanel()
         {

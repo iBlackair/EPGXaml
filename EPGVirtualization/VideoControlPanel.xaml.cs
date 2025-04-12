@@ -9,7 +9,7 @@ namespace EPGVirtualization;
 public partial class VideoControl : UserControl
 {
     #region Events
-    // Events to communicate with the parent control
+    // Events remain unchanged
     public event EventHandler PlayPauseClicked;
     public event EventHandler FullScreenClicked;
     public event EventHandler MuteToggleClicked;
@@ -27,6 +27,7 @@ public partial class VideoControl : UserControl
     #endregion
 
     #region Properties
+    // Properties remain unchanged 
     private bool _isPlaying = false;
     public bool IsPlaying
     {
@@ -65,7 +66,7 @@ public partial class VideoControl : UserControl
     public double ProgressPercentage
     {
         get { return _progressPercentage; }
-        private set
+        set
         {
             _progressPercentage = value;
             UpdateProgressUI();
@@ -102,32 +103,57 @@ public partial class VideoControl : UserControl
 
         // Setup progress update timer
         SetupProgressUpdateTimer();
+
+        // Add handlers for control resizing
+        this.SizeChanged += VideoControl_SizeChanged;
+        this.Loaded += VideoControl_Loaded;
     }
+
+    private void VideoControl_Loaded(object sender, RoutedEventArgs e)
+    {
+        // Initial update of progress bars based on actual control size
+        UpdateProgressUI();
+        UpdateBufferUI();
+    }
+
 
     private void SetupProgressUpdateTimer()
     {
         _progressUpdateTimer = new DispatcherTimer();
-        _progressUpdateTimer.Interval = TimeSpan.FromSeconds(1); // Update every second
+        _progressUpdateTimer.Interval = TimeSpan.FromSeconds(1);
         //_progressUpdateTimer.Tick += (s, e) => UpdateProgress();
         //_progressUpdateTimer.Start();
     }
 
-
     private void UpdateProgressUI()
     {
-        if (ShowProgress != null)
+        if (ShowProgress != null && ProgressBarInteractive != null)
         {
-            // Set the width of the progress bar as a percentage
-            ShowProgress.Width = ProgressPercentage;
+            // Get available width from the parent container
+            double availableWidth = ProgressBarInteractive.ActualWidth;
+
+            // Calculate width based on percentage, but only if we have a valid width
+            if (availableWidth > 0)
+            {
+                // Calculate the width as a percentage of available space
+                ShowProgress.Width = (_progressPercentage / 100.0) * availableWidth;
+            }
         }
     }
 
     private void UpdateBufferUI()
     {
-        if (BufferProgress != null)
+        if (BufferProgress != null && ProgressBarInteractive != null)
         {
-            // Set the width of the buffer progress as a percentage
-            BufferProgress.Width = BufferPercentage;
+            // Get available width from the parent container
+            double availableWidth = ProgressBarInteractive.ActualWidth;
+
+            // Calculate width based on percentage, but only if we have a valid width
+            if (availableWidth > 0)
+            {
+                // Calculate the width as a percentage of available space
+                BufferProgress.Width = (_bufferPercentage / 100.0) * availableWidth;
+            }
         }
     }
     #endregion
@@ -197,10 +223,7 @@ public partial class VideoControl : UserControl
             _isDraggingProgress = false;
             UpdateProgressFromMousePosition(e);
 
-            // Calculate the target time based on progress percentage
-            //DateTime targetTime = CalculateTimeFromProgress(ProgressPercentage);
-
-            // Fire the seek event with the calculated time
+            // Fire the seek event with the calculated position
             SeekPositionChanged?.Invoke(this, ProgressPercentage);
 
             StartAutoHideTimer(); // Resume auto-hide
@@ -220,9 +243,6 @@ public partial class VideoControl : UserControl
             double progressPercent = Math.Min(100, Math.Max(0,
                 (mousePosition.X / ProgressBarInteractive.ActualWidth) * 100));
 
-            // Calculate the preview time
-            //DateTime previewTime = CalculateTimeFromProgress(progressPercent);
-
             // Update the preview position and text
             double previewWidth = TimePreview.ActualWidth > 0 ? TimePreview.ActualWidth : 50;
             double previewPosition = (mousePosition.X) - (previewWidth / 2);
@@ -233,8 +253,8 @@ public partial class VideoControl : UserControl
 
             TimePreview.Margin = new Thickness(previewPosition, 0, 0, 10);
 
-            // Format the preview time
-            //PreviewTimeText.Text = previewTime.ToString("HH:mm");
+            // Format preview time text (would be implemented based on your specific time calculation)
+            // PreviewTimeText.Text = CalculateTimeFromProgress(progressPercent).ToString("HH:mm:ss");
 
             // If dragging, update the actual progress
             if (_isDraggingProgress)
@@ -259,14 +279,6 @@ public partial class VideoControl : UserControl
             (mousePosition.X / ProgressBarInteractive.ActualWidth) * 100));
 
         ProgressPercentage = progressPercent;
-    }
-
-    private DateTime CalculateTimeFromProgress(DateTime StartTime, DateTime StopTime)
-    {
-        double totalDuration = (StopTime - StartTime).TotalSeconds;
-        //double targetSeconds = (progressPercentage / 100.0) * totalDuration;
-
-        return StartTime.AddSeconds(totalDuration);
     }
 
     // Settings button click
@@ -374,8 +386,6 @@ public partial class VideoControl : UserControl
             // Normal volume icon (speaker with waves)
             VolumeIcon.Data = Geometry.Parse("M277,571.015 L277,573.068 C282.872,574.199 287,578.988 287,585 C287,590.978 283,595.609 277,596.932 L277,598.986 C283.776,597.994 289,592.143 289,585 C289,577.857 283.776,572.006 277,571.015 L277,571.015 Z M272,573 L265,577.667 L265,592.333 L272,597 C273.104,597 274,596.104 274,595 L274,575 C274,573.896 273.104,573 272,573 L272,573 Z M283,585 C283,581.477 280.388,578.59 277,578.101 L277,580.101 C279.282,580.564 281,582.581 281,585 C281,587.419 279.282,589.436 277,589.899 L277,591.899 C280.388,591.41 283,588.523 283,585 L283,585 Z M258,581 L258,589 C258,590.104 258.896,591 260,591 L263,591 L263,579 L260,579 C258.896,579 258,579.896 258,581 L258,581 Z");
         }
-
-        var volumeDataLess = "M 272 573 L 265 577.667 L 265 592.333 L 272 597 C 273.104 597 274 596.104 274 595 L 274 575 C 274 573.896 273.104 573 272 573 Z M 283 585 C 283 581.477 280.388 578.59 277 578.101 L 277 580.101 C 279.282 580.564 281 582.581 281 585 C 281 587.419 279.282 589.436 277 589.899 L 277 591.899 C 280.388 591.41 283 588.523 283 585 Z M 258 581 L 258 589 C 258 590.104 258.896 591 260 591 L 263 591 L 263 579 L 260 579 C 258.896 579 258 579.896 258 581 Z";
     }
 
     /// <summary>
@@ -389,31 +399,32 @@ public partial class VideoControl : UserControl
         TimeSpan totalDuration = stopTime - startTime;
         TimeSpan timePassed = now - startTime;
 
-        
         if (CurrentTimeText == null || TotalDurationText == null)
             return;
 
-        double percentagePassed = (timePassed.TotalSeconds / totalDuration.TotalSeconds) * 100;
+        // Calculate percentage for progress bar
+        double percentagePassed = 0;
+        if (totalDuration.TotalSeconds > 0)
+        {
+            percentagePassed = Math.Min(100, Math.Max(0,
+                (timePassed.TotalSeconds / totalDuration.TotalSeconds) * 100));
+
+            // Update progress percentage
+            ProgressPercentage = percentagePassed;
+        }
+
         string timePassedFormatted = timePassed.ToString(@"hh\:mm\:ss");
 
-
         // Display start time if before show start, current time if during show
-        if (now < startTime)//Before Program Start
+        if (now < startTime) // Before Program Start
             CurrentTimeText.Text = "00:00";
-        else if (now > stopTime) //After Show
+        else if (now > stopTime) // After Show
             CurrentTimeText.Text = FormatTimeSpan(totalDuration);
         else
-            CurrentTimeText.Text = timePassedFormatted;
+            CurrentTimeText.Text = FormatTimeSpan(timePassed);
 
-
-        // Always display stop time as the end time
-        TotalDurationText.Text = totalDuration.ToString(@"hh\:mm");
-    }
-
-    private string FormatDateTime(DateTime dateTime)
-    {
-        // Format as HH:mm, can be changed to include seconds if needed
-        return dateTime.ToString("HH:mm");
+        // Always display total duration
+        TotalDurationText.Text = FormatTimeSpan(totalDuration);
     }
 
     private string FormatTimeSpan(TimeSpan timeSpan)
@@ -485,77 +496,47 @@ public partial class VideoControl : UserControl
     }
     #endregion
 
-    #region LibVLC Integration Methods
-    /// <summary>
-    /// Call this method to update UI based on LibVLC player state
-    /// </summary>
-    /// <param name="player">LibVLC player instance</param>
-    public void UpdateFromLibVLC(object player)
+    // Add this to your VideoControl.xaml.cs file
+
+    // Add a new property to track if we should animate resizing
+    public bool AnimateResizing { get; set; } = true;
+
+    // Add this method to the class
+    public void HandleWindowStateChanged(WindowState newState)
     {
-        // This is a placeholder method showing how you would integrate with LibVLC
-        // You would implement this with your actual LibVLCSharp reference
+        if (newState == WindowState.Maximized || newState == WindowState.Normal)
+        {
+            // Hide during the transition
+            var currentVisibility = this.Visibility;
+            this.Visibility = Visibility.Hidden;
 
-        // Example:
-        /*
-        var mediaPlayer = player as LibVLCSharp.Shared.MediaPlayer;
-
-        // Update play/pause state
-        IsPlaying = mediaPlayer.IsPlaying;
-
-        // Update time
-        TimeSpan current = TimeSpan.FromMilliseconds(mediaPlayer.Time);
-        TimeSpan total = TimeSpan.FromMilliseconds(mediaPlayer.Length);
-        UpdateTime(current, total);
-
-        // Update position (0-100)
-        Position = mediaPlayer.Position * 100;
-
-        // Update volume
-        VolumeLevel = mediaPlayer.Volume;
-        IsMuted = mediaPlayer.Mute;
-        */
+            // Create a delay to match the Window animation time (typically around 150-250ms)
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+            timer.Tick += (s, e) =>
+            {
+                this.Visibility = currentVisibility;
+                timer.Stop();
+            };
+            timer.Start();
+        }
     }
 
-    /// <summary>
-    /// Example of how to bind this control panel to a LibVLC player
-    /// </summary>
-    /// <param name="player">LibVLC player instance</param>
-    public void BindToLibVLC(object player)
+    // Modify your existing SizeChanged handler or add this if you don't have one
+    private void VideoControl_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        // This is a placeholder method showing how you would bind events to LibVLC
-        // You would implement this with your actual LibVLCSharp reference
-
-        // Example:
-        /*
-        var mediaPlayer = player as LibVLCSharp.Shared.MediaPlayer;
-
-        // Connect control events to player actions
-        PlayPauseClicked += (s, e) => {
-            if (mediaPlayer.IsPlaying)
-                mediaPlayer.Pause();
-            else
-                mediaPlayer.Play();
-
-            IsPlaying = mediaPlayer.IsPlaying;
-        };
-
-        MuteToggleClicked += (s, e) => {
-            mediaPlayer.Mute = !mediaPlayer.Mute;
-            IsMuted = mediaPlayer.Mute;
-        };
-
-        VolumeChanged += (s, volume) => {
-            mediaPlayer.Volume = (int)volume;
-        };
-
-        SeekPositionChanged += (s, position) => {
-            mediaPlayer.Position = (float)(position / 100.0);
-        };
-
-        PlaybackSpeedChanged += (s, speed) => {
-            mediaPlayer.Rate = (float)speed;
-        };
-        */
+        // Use dispatcher to delay the update slightly, allowing parent containers to finish resizing
+        if (AnimateResizing && Math.Abs(e.PreviousSize.Width - e.NewSize.Width) > 5)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                UpdateProgressUI();
+                UpdateBufferUI();
+            }), DispatcherPriority.Render);
+        }
+        else
+        {
+            UpdateProgressUI();
+            UpdateBufferUI();
+        }
     }
-    #endregion
 }
