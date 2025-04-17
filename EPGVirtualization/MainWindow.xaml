@@ -7,7 +7,7 @@
         xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
         mc:Ignorable="d"
         Title="EPG Viewer" Height="900" Width="1600">
-    <Grid>
+    <Grid x:Name="MainGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="20" />
             <!-- Menu -->
@@ -41,13 +41,13 @@
             </Menu>
         </Border>
 
-        <!-- Video panel with strict control of the video and controls width -->
-        <Border Grid.Row="1" Grid.Column="1" BorderThickness=".6" BorderBrush="LightBlue" Panel.ZIndex="1">
+        <!-- Video panel with dynamic sizing -->
+        <Border x:Name="VideoContainer" Grid.Row="1" Grid.Column="1" BorderThickness=".6" BorderBrush="LightBlue" Panel.ZIndex="1">
             <DockPanel LastChildFill="True" ClipToBounds="True">
                 <!-- Use ViewBox to maintain 16:9 aspect ratio and clip contents -->
-                <Viewbox Stretch="Uniform" DockPanel.Dock="Top">
-                    <!-- Key container that enforces aspect ratio -->
-                    <Grid x:Name="VideoContainer" Width="1600" Height="900" ClipToBounds="True">
+                <Viewbox x:Name="VideoViewbox" Stretch="Uniform" DockPanel.Dock="Top">
+                    <!-- Grid with dynamic size but enforced aspect ratio via code -->
+                    <Grid x:Name="VideoAspectGrid" ClipToBounds="True">
                         <!-- Main video view -->
                         <vlc:VideoView x:Name="VideoView" 
                                      HorizontalAlignment="Stretch" 
@@ -57,7 +57,7 @@
                                  HorizontalAlignment="Stretch"
                                  ClipToBounds="True">
                                 <local:VideoControl x:Name="controlPanel" 
-                                                  MaxWidth="{Binding ActualWidth, ElementName=VideoContainer}"
+                                                  MaxWidth="{Binding ActualWidth, ElementName=VideoAspectGrid}"
                                                   VerticalAlignment="Bottom"
                                                   HorizontalAlignment="Stretch"/>
                             </Grid>
@@ -68,7 +68,7 @@
         </Border>
 
         <!-- EPG panel with border -->
-        <Border Grid.Row="2" Grid.ColumnSpan="2" BorderThickness="0,0.6,0,0.6" BorderBrush="Gray">
+        <Border x:Name="EPGContainer" Grid.Row="2" Grid.ColumnSpan="2" BorderThickness="0,0.6,0,0.6" BorderBrush="Gray">
             <local:EPGCanvas x:Name="EPGControl"
                          ViewStartTime="{Binding Today}" 
                          ChannelHeight="40"

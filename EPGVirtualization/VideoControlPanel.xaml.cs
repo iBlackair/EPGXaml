@@ -1,6 +1,7 @@
 ﻿using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using System.Windows;
 using System.Diagnostics;
@@ -87,6 +88,16 @@ public partial class VideoControl : UserControl
     private bool _isDraggingProgress = false;
     private bool _isSettingsOpen = false;
     private DispatcherTimer _progressUpdateTimer;
+    private DispatcherTimer _hideTimer;
+    private double _originalHeight;
+    private bool _isVisible = true;
+    private bool _isAnimating = false;
+
+    // Property to determine if we should auto-hide
+    public bool AutoHide { get; set; } = true;
+
+    // Animation duration in milliseconds
+    public int AnimationDuration { get; set; } = 300;
     #endregion
 
     #region Constructor
@@ -97,6 +108,11 @@ public partial class VideoControl : UserControl
         // Initialize UI states
         UpdatePlayPauseIcon();
         UpdateVolumeIcon();
+
+        // Get original height for animation
+        this.Loaded += (s, e) => {
+            _originalHeight = this.ActualHeight;
+        };
 
         // Setup auto-hide timer
         SetupAutoHideTimer();
@@ -114,8 +130,39 @@ public partial class VideoControl : UserControl
         // Initial update of progress bars based on actual control size
         UpdateProgressUI();
         UpdateBufferUI();
+
+        // Listen for mouse movement events on parent
+        var parentElement = this.Parent as UIElement;
+        if (parentElement != null)
+        {
+            parentElement.MouseMove += Parent_MouseMove;
+            parentElement.MouseLeave += Parent_MouseLeave;
+        }
+
+        // Also listen to our own mouse events
+        this.MouseMove += VideoControl_MouseMove;
     }
 
+    private void Parent_MouseMove(object sender, MouseEventArgs e)
+    {
+        // Show the control when mouse moves over the video
+        ShowWithAnimation();
+        ResetAutoHideTimer();
+    }
+
+    private void Parent_MouseLeave(object sender, MouseEventArgs e)
+    {
+        // Hide when mouse leaves the video area
+        if (AutoHide && !_isDraggingProgress && !_isSettingsOpen)
+            HideWithAnimation();
+    }
+
+    private void VideoControl_MouseMove(object sender, MouseEventArgs e)
+    {
+        // Reset timer when mouse moves over the control itself
+        ResetAutoHideTimer();
+        e.Handled = true;
+    }
 
     private void SetupProgressUpdateTimer()
     {
@@ -440,33 +487,78 @@ public partial class VideoControl : UserControl
     }
     #endregion
 
-    #region Visibility Management
-    private double originalOpacity = 1.0;
-    private DispatcherTimer hideTimer;
-
+    #region Visibility Management with Animation
     private void SetupAutoHideTimer()
     {
-        hideTimer = new DispatcherTimer();
-        hideTimer.Interval = TimeSpan.FromSeconds(3);
-        hideTimer.Tick += (s, e) => Hide();
+        _hideTimer = new DispatcherTimer();
+        _hideTimer.Interval = TimeSpan.FromSeconds(3);
+        _hideTimer.Tick += (s, e) => {
+            if (AutoHide && !_isDraggingProgress && !_isSettingsOpen)
+            {
+                HideWithAnimation();
+            }
+        };
     }
 
     /// <summary>
-    /// Shows the control panel
+    /// Shows the control panel with animation
     /// </summary>
-    public void Show()
+    public void ShowWithAnimation()
     {
-        this.Visibility = Visibility.Visible;
-        this.Opacity = originalOpacity;
+        if (!_isVisible && !_isAnimating)
+        {
+            _isAnimating = true;
+
+            // Make sure it's visible
+            this.Visibility = Visibility.Visible;
+
+            // Create and start the animation
+            DoubleAnimation animation = new DoubleAnimation
+            {
+                From = 0,
+                To = 1,
+                Duration = new Duration(TimeSpan.FromMilliseconds(AnimationDuration)),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+
+            animation.Completed += (s, e) => {
+                _isVisible = true;
+                _isAnimating = false;
+            };
+
+            this.BeginAnimation(OpacityProperty, animation);
+
+            // Notify that the control is now visible
+            _isVisible = true;
+        }
     }
 
     /// <summary>
-    /// Hides the control panel
+    /// Hides the control panel with animation
     /// </summary>
-    public void Hide()
+    public void HideWithAnimation()
     {
-        // In a full implementation, you'd use animation
-        this.Visibility = Visibility.Collapsed;
+        if (_isVisible && !_isAnimating && AutoHide)
+        {
+            _isAnimating = true;
+
+            // Create and start the animation
+            DoubleAnimation animation = new DoubleAnimation
+            {
+                From = 1,
+                To = 0,
+                Duration = new Duration(TimeSpan.FromMilliseconds(AnimationDuration)),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            };
+
+            animation.Completed += (s, e) => {
+                this.Visibility = Visibility.Collapsed;
+                _isVisible = false;
+                _isAnimating = false;
+            };
+
+            this.BeginAnimation(OpacityProperty, animation);
+        }
     }
 
     /// <summary>
@@ -474,8 +566,11 @@ public partial class VideoControl : UserControl
     /// </summary>
     public void StartAutoHideTimer()
     {
-        hideTimer.Stop();
-        hideTimer.Start();
+        if (AutoHide)
+        {
+            _hideTimer.Stop();
+            _hideTimer.Start();
+        }
     }
 
     /// <summary>
@@ -483,8 +578,12 @@ public partial class VideoControl : UserControl
     /// </summary>
     public void ResetAutoHideTimer()
     {
-        hideTimer.Stop();
-        hideTimer.Start();
+        if (AutoHide)
+        {
+            ShowWithAnimation();
+            _hideTimer.Stop();
+            _hideTimer.Start();
+        }
     }
 
     /// <summary>
@@ -492,11 +591,9 @@ public partial class VideoControl : UserControl
     /// </summary>
     public void StopAutoHideTimer()
     {
-        hideTimer.Stop();
+        _hideTimer.Stop();
     }
     #endregion
-
-    // Add this to your VideoControl.xaml.cs file
 
     // Add a new property to track if we should animate resizing
     public bool AnimateResizing { get; set; } = true;

@@ -6,6 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
@@ -17,20 +19,31 @@ namespace EPGVirtualization
         private LibVLC _libVLC;
         private MediaPlayer _mediaPlayer;
         private System.Windows.Threading.DispatcherTimer _updateTimer;
+        private System.Windows.Threading.DispatcherTimer _cursorTimer;
         private AspectRatioEnforcer _videoAspectRatioEnforcer;
         private bool _isResizing = false;
+        private bool _isFullScreen = false;
+        private bool _isCursorVisible = true;
+        private Point _lastCursorPosition;
+
+        // Remember original layout parameters before fullscreen
+        private int _originalEpgRow;
+        private int _originalEpgRowSpan;
+        private int _originalVideoRow;
+        private int _originalVideoRowSpan;
+        private int _originalVideoColumn;
+        private int _originalVideoColumnSpan;
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private ProgramInfo _selectedProgram = new ProgramInfo();
-        private ProgramInfo SelectedProgram 
-        { 
+        private ProgramInfo SelectedProgram
+        {
             get => _selectedProgram;
             set
             {
                 _selectedProgram = value;
-                //controlPanel.UpdateTime(_selectedProgram.StartTime, _selectedProgram.Duration);
-                OnPropertyChanged(nameof(_selectedProgram)); 
-            } 
+                OnPropertyChanged(nameof(_selectedProgram));
+            }
         }
 
         private void OnPropertyChanged(string propertyName)
@@ -48,50 +61,155 @@ namespace EPGVirtualization
 
             _libVLC = new LibVLC();
             _mediaPlayer = new MediaPlayer(_libVLC);
-            _mediaPlayer.Volume = 0; // Set default volume to 100%
+            _mediaPlayer.Volume = 75; // Set default volume to 75%
+
             // Connect the VideoView with the MediaPlayer
             VideoView.MediaPlayer = _mediaPlayer;
 
             InitializeAsync();
+
             // Set up the control panel events
             SetupControlPanel();
+
             this.StateChanged += MainWindow_StateChanged;
             this.Loaded += MainWindow_Loaded;
 
+            // Handle keyboard events for fullscreen
+            this.KeyDown += MainWindow_KeyDown;
 
-        // Create a timer to update the UI from LibVLC state
-        _updateTimer = new System.Windows.Threading.DispatcherTimer();
-            _updateTimer.Interval = TimeSpan.FromMilliseconds(1);
+            // Set up cursor auto-hide timer
+            SetupCursorTimer();
+
+            // Set up mouse events for cursor handling
+            VideoView.MouseMove += VideoView_MouseMove;
+            VideoContainer.MouseMove += VideoView_MouseMove;
+            VideoAspectGrid.MouseMove += VideoView_MouseMove;
+
+            // Create a timer to update the UI from LibVLC state
+            _updateTimer = new System.Windows.Threading.DispatcherTimer();
+            _updateTimer.Interval = TimeSpan.FromMilliseconds(100);
             _updateTimer.Tick += UpdateTimer_Tick;
 
             // Start the timer
             _updateTimer.Start();
+
             // Handle window closing to properly dispose resources
             Closing += MainWindow_Closing;
+        }
 
-            // Optional: Load a media file when the application starts
-             LoadMedia("http://11.troya.info:34000/ch2452/mono.m3u8?token=mrgold.Kj3afDUEcHu1PHn46lO-gmvsX6SeBaNDIaqlbosizMegtK_457uo3YE-MwcQ-LHT");
-            // Initialize asynchronously - can't use await directly in constructor
-            
+        private void SetupCursorTimer()
+        {
+            _cursorTimer = new DispatcherTimer();
+            _cursorTimer.Interval = TimeSpan.FromSeconds(3);
+            _cursorTimer.Tick += (s, e) =>
+            {
+                // Hide cursor when timer ticks
+                if (_isCursorVisible)
+                {
+                    HideCursor();
+                }
+            };
+        }
+
+        private void VideoView_MouseMove(object sender, MouseEventArgs e)
+        {
+            Point currentPosition = e.GetPosition(VideoView);
+
+            // Only process substantial mouse movements to prevent tiny movements from constantly resetting
+            if (Math.Abs(currentPosition.X - _lastCursorPosition.X) > 5 ||
+                Math.Abs(currentPosition.Y - _lastCursorPosition.Y) > 5)
+            {
+                _lastCursorPosition = currentPosition;
+
+                // Show cursor
+                ShowCursor();
+
+                // Reset the timer
+                _cursorTimer.Stop();
+                _cursorTimer.Start();
+            }
+        }
+
+        private void ShowCursor()
+        {
+            if (!_isCursorVisible)
+            {
+                _isCursorVisible = true;
+                Mouse.OverrideCursor = null;
+
+                // Show video controls if they should be visible
+                controlPanel.ShowWithAnimation();
+            }
+        }
+
+        private void HideCursor()
+        {
+            if (_isCursorVisible && _isFullScreen)
+            {
+                _isCursorVisible = false;
+                Mouse.OverrideCursor = Cursors.None;
+
+                // Hide video controls
+                controlPanel.HideWithAnimation();
+            }
+        }
+
+        private void MainWindow_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape && _isFullScreen)
+            {
+                ToggleFullScreen();
+            }
+            else if (e.Key == Key.F11)
+            {
+                ToggleFullScreen();
+            }
+            else
+            {
+                // Any key press should show the cursor and controls
+                ShowCursor();
+                _cursorTimer.Stop();
+                _cursorTimer.Start();
+            }
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            // Save original layout parameters
+            SaveOriginalLayoutParameters();
+
+            // Set initial size for the VideoAspectGrid for correct aspect ratio
+            VideoAspectGrid.Width = 1600;
+            VideoAspectGrid.Height = 900;
+
             // Create an aspect ratio enforcer for the video view container
-            // You might need to adjust which element needs the aspect ratio enforced
-            // depending on your exact layout
+            // This will dynamically adjust the size while maintaining the 16:9 ratio
+            _videoAspectRatioEnforcer = new AspectRatioEnforcer(VideoAspectGrid, 16.0 / 9.0);
 
-            // Option 1: If using the ViewBox approach in XAML:
-            // The ViewBox handles the aspect ratio automatically
+            // Respond to size changes in the container
+            VideoContainer.SizeChanged += VideoContainer_SizeChanged;
+        }
 
-            // Option 2: If not using ViewBox, create an AspectRatioEnforcer:
-            // Find the container Grid that holds the VideoView (adjust as needed)
-            var videoContainer = VideoView.Parent as FrameworkElement;
-            if (videoContainer != null)
+        private void VideoContainer_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            // Only update when size changes significantly to avoid excessive layout calculations
+            if (Math.Abs(e.PreviousSize.Width - e.NewSize.Width) > 5 ||
+                Math.Abs(e.PreviousSize.Height - e.NewSize.Height) > 5)
             {
-                // Create enforcer with 16:9 aspect ratio (width/height = 1.7778)
-                _videoAspectRatioEnforcer = new AspectRatioEnforcer(videoContainer, 16.0 / 9.0);
+                // Will be handled by the AspectRatioEnforcer
+                VideoAspectGrid.InvalidateMeasure();
             }
+        }
+
+        private void SaveOriginalLayoutParameters()
+        {
+            // Save original grid positions
+            _originalEpgRow = Grid.GetRow(EPGContainer);
+            _originalEpgRowSpan = Grid.GetRowSpan(EPGContainer);
+            _originalVideoRow = Grid.GetRow(VideoContainer);
+            _originalVideoRowSpan = Grid.GetRowSpan(VideoContainer);
+            _originalVideoColumn = Grid.GetColumn(VideoContainer);
+            _originalVideoColumnSpan = Grid.GetColumnSpan(VideoContainer);
         }
 
         private void MainWindow_StateChanged(object sender, EventArgs e)
@@ -121,12 +239,7 @@ namespace EPGVirtualization
                         // Ensure the aspect ratio is maintained
                         if (_videoAspectRatioEnforcer != null)
                         {
-                            var videoContainer = VideoView.Parent as FrameworkElement;
-                            if (videoContainer != null)
-                            {
-                                // Manually trigger a size change to update aspect ratio
-                                videoContainer.InvalidateMeasure();
-                            }
+                            VideoAspectGrid.InvalidateMeasure();
                         }
                     };
                     timer.Start();
@@ -153,19 +266,9 @@ namespace EPGVirtualization
                 _mediaPlayer.Mute = !_mediaPlayer.Mute;
             };
 
-
             // Fullscreen
             controlPanel.FullScreenClicked += (s, e) => {
-                if (WindowStyle == WindowStyle.None)
-                {
-                    WindowStyle = WindowStyle.SingleBorderWindow;
-                    WindowState = WindowState.Normal;
-                }
-                else
-                {
-                    WindowStyle = WindowStyle.None;
-                    WindowState = WindowState.Maximized;
-                }
+                ToggleFullScreen();
             };
 
             // Playback speed
@@ -178,11 +281,60 @@ namespace EPGVirtualization
             controlPanel.IsMuted = false;
             controlPanel.VolumeLevel = 75; // Default volume
 
-            //// Set buffer position (this would come from your streaming info)
-            //// For example, if you're 15 minutes into a 2-hour show and have 30 minutes buffered:
-            //double showProgressPercent = 12.5; // (15 / 120) * 100
-            //double bufferProgressPercent = 25.0; // ((15+30) / 120) * 100
-            //controlPanel.BufferPercentage = bufferProgressPercent;
+            // Enable auto-hide for controls
+            controlPanel.AutoHide = true;
+        }
+
+        private void ToggleFullScreen()
+        {
+            _isFullScreen = !_isFullScreen;
+
+            if (_isFullScreen)
+            {
+                // Enter full screen mode
+                WindowStyle = WindowStyle.None;
+                WindowState = WindowState.Maximized;
+
+                // Hide the EPG panel
+                EPGContainer.Visibility = Visibility.Collapsed;
+
+                // Make video container take up the entire window
+                Grid.SetRow(VideoContainer, 0);
+                Grid.SetRowSpan(VideoContainer, 3);
+                Grid.SetColumn(VideoContainer, 0);
+                Grid.SetColumnSpan(VideoContainer, 2);
+
+                // Remove border from video container in fullscreen mode
+                VideoContainer.BorderThickness = new Thickness(0);
+
+                // Start cursor hide timer
+                _cursorTimer.Start();
+            }
+            else
+            {
+                // Exit full screen mode
+                WindowStyle = WindowStyle.SingleBorderWindow;
+                WindowState = WindowState.Normal;
+
+                // Restore EPG panel
+                EPGContainer.Visibility = Visibility.Visible;
+
+                // Restore video view to its original position
+                Grid.SetRow(VideoContainer, _originalVideoRow);
+                Grid.SetRowSpan(VideoContainer, _originalVideoRowSpan);
+                Grid.SetColumn(VideoContainer, _originalVideoColumn);
+                Grid.SetColumnSpan(VideoContainer, _originalVideoColumnSpan);
+
+                // Restore the border
+                VideoContainer.BorderThickness = new Thickness(.6);
+
+                // Stop cursor hide timer and ensure cursor is visible
+                _cursorTimer.Stop();
+                ShowCursor();
+            }
+
+            // Update layout to reflect changes
+            MainGrid.UpdateLayout();
         }
 
         private void UpdateTimer_Tick(object sender, EventArgs e)
@@ -191,9 +343,9 @@ namespace EPGVirtualization
             if (_mediaPlayer.Media != null)
             {
                 // Update position
-                //controlPanel.Position = _mediaPlayer.Position * 100;
-                if(_selectedProgram != null)
+                if (_selectedProgram != null)
                     controlPanel.UpdateTime(_selectedProgram.StartTime, _selectedProgram.StopTime);
+
                 // Update play state
                 controlPanel.IsPlaying = _mediaPlayer.IsPlaying;
 
@@ -202,6 +354,7 @@ namespace EPGVirtualization
                 controlPanel.VolumeLevel = _mediaPlayer.Volume;
             }
         }
+
         private void LoadMedia(string mediaPath)
         {
             // Create a new Media instance
@@ -209,37 +362,27 @@ namespace EPGVirtualization
             {
                 // Assign the media to the player
                 _mediaPlayer.Media = media;
-                _mediaPlayer.NetworkCaching = 30 * 1000; // Set network caching to 1 second
+                _mediaPlayer.NetworkCaching = 30 * 1000; // Set network caching to 30 seconds
                 // Auto-play if desired
                 _mediaPlayer.Play();
             }
         }
-        private void PlayButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (!_mediaPlayer.IsPlaying)
-            {
-                _mediaPlayer.Play();
-            }
-            else
-            {
-                _mediaPlayer.Pause();
-            }
-        }
-        private void PauseButton_Click(object sender, RoutedEventArgs e)
-        {
-            _mediaPlayer.Pause();
-        }
-        private void StopButton_Click(object sender, RoutedEventArgs e)
-        {
-            _mediaPlayer.Stop();
-        }
+
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            // Reset cursor to make sure it's visible when closing
+            Mouse.OverrideCursor = null;
+
+            // Stop timers
+            _cursorTimer?.Stop();
+            _updateTimer?.Stop();
+
             // Clean up resources to prevent memory leaks
             _mediaPlayer.Stop();
             _mediaPlayer.Dispose();
             _libVLC.Dispose();
-        }     
+        }
+
         private async void InitializeAsync()
         {
             try
@@ -249,7 +392,7 @@ namespace EPGVirtualization
 
                 // Get channels
                 var channels = await parser.Parse();
-                //EPGRow.Height = new GridLength(0,GridUnitType.Pixel);
+
                 // Set the data for our EPG control
                 EPGControl.SetChannels(channels.ToList());
                 EPGControl.ScrollToCurrentTime();
@@ -264,6 +407,7 @@ namespace EPGVirtualization
                 EPGControl.SetChannels(GenerateSampleChannels());
             }
         }
+
         private void EPGControl_ProgramSelected(object sender, ProgramInfo program)
         {
             var channel = EPGControl.Channels.FirstOrDefault(c => c.TvgName == program.Channel);
@@ -281,6 +425,7 @@ namespace EPGVirtualization
                 }
             }
         }
+
         private List<ChannelInfo> GenerateSampleChannels()
         {
             var channels = new List<ChannelInfo>();
