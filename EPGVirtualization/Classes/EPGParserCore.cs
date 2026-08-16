@@ -496,7 +496,7 @@ namespace EPGVirtualization.Classes
                 // Extract the date/time portion and the timezone offset
                 string datePart = dateTimeStr.Substring(0, 14);
                 string offsetPart = dateTimeStr.Length > 14 ? dateTimeStr.Substring(14).Trim() : "+0000";
-
+                offsetPart = "+0200";
                 // Parse the main date/time part
                 int year = int.Parse(datePart.Substring(0, 4));
                 int month = int.Parse(datePart.Substring(4, 2));

@@ -1,26 +1,20 @@
 ﻿using EPGVirtualization.Classes;
-using EPGVirtualization.Classes.EPGVirtualization;
 using EPGVirtualization.Models;
-using LibVLCSharp.Shared;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Threading;
-using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
+using Microsoft.Web.WebView2.Core;
+using System.IO;
+using System.CodeDom;
+
+
 
 namespace EPGVirtualization
 {
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
-        private LibVLC _libVLC;
-        private MediaPlayer _mediaPlayer;
-        private System.Windows.Threading.DispatcherTimer _updateTimer;
-        private System.Windows.Threading.DispatcherTimer _cursorTimer;
-        private AspectRatioEnforcer _videoAspectRatioEnforcer;
+
         private bool _isResizing = false;
         private bool _isFullScreen = false;
         private bool _isCursorVisible = true;
@@ -51,25 +45,14 @@ namespace EPGVirtualization
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
+        
         public MainWindow()
         {
             // Make sure to add the style resources in App.xaml or MainWindow.xaml
             InitializeComponent();
-
-            // Initialize LibVLC and create a media player
-            Core.Initialize(); // Important: Initialize the VLC engine
-
-            _libVLC = new LibVLC();
-            _mediaPlayer = new MediaPlayer(_libVLC);
-            _mediaPlayer.Volume = 75; // Set default volume to 75%
-
-            // Connect the VideoView with the MediaPlayer
-            VideoView.MediaPlayer = _mediaPlayer;
-
+            Unosquare.FFME.Library.FFmpegDirectory = Path.Combine(Directory.GetCurrentDirectory(),"Codecs");
             InitializeAsync();
-
-            // Set up the control panel events
-            SetupControlPanel();
+            //InitializeWebView();
 
             this.StateChanged += MainWindow_StateChanged;
             this.Loaded += MainWindow_Loaded;
@@ -77,56 +60,340 @@ namespace EPGVirtualization
             // Handle keyboard events for fullscreen
             this.KeyDown += MainWindow_KeyDown;
 
-            // Set up cursor auto-hide timer
-            SetupCursorTimer();
-
-            // Set up mouse events for cursor handling
-            VideoView.MouseMove += VideoView_MouseMove;
-            VideoContainer.MouseMove += VideoView_MouseMove;
-            VideoAspectGrid.MouseMove += VideoView_MouseMove;
-
-            // Create a timer to update the UI from LibVLC state
-            _updateTimer = new System.Windows.Threading.DispatcherTimer();
-            _updateTimer.Interval = TimeSpan.FromMilliseconds(100);
-            _updateTimer.Tick += UpdateTimer_Tick;
-
-            // Start the timer
-            _updateTimer.Start();
-
             // Handle window closing to properly dispose resources
             Closing += MainWindow_Closing;
         }
 
-        private void SetupCursorTimer()
+        private async void InitializeWebView()
         {
-            _cursorTimer = new DispatcherTimer();
-            _cursorTimer.Interval = TimeSpan.FromSeconds(3);
-            _cursorTimer.Tick += (s, e) =>
+            try
             {
-                // Hide cursor when timer ticks
-                if (_isCursorVisible)
+                // Create WebView2 environment with UHD-optimized settings
+                var environment = await CoreWebView2Environment.CreateAsync(null, null, new CoreWebView2EnvironmentOptions
                 {
-                    HideCursor();
-                }
-            };
+                    AdditionalBrowserArguments = string.Join(" ", new[]
+                    {
+                        "--enable-features=VaapiVideoDecoder,VaapiVideoEncoder",
+                        "--enable-gpu-rasterization",
+                        "--enable-zero-copy",
+                        "--enable-hardware-overlays",
+                        "--disable-features=UseChromeOSDirectVideoDecoder",
+                        "--disable-background-timer-throttling",
+                        "--disable-backgrounding-occluded-windows",
+                        "--disable-renderer-backgrounding",
+                        "--max_old_space_size=8192", // 8GB memory limit
+                        "--memory-pressure-off", // Disable memory pressure
+                        "--disable-dev-shm-usage",
+                        "--enable-features=MSECodecs",
+                        "--disable-features=VizDisplayCompositor"// Use /tmp instead of /dev/shm
+                    })
+                });
+
+                //await webView.EnsureCoreWebView2Async(environment);
+
+                // Configure for high performance video
+                //webView.CoreWebView2.Settings.AreDevToolsEnabled = true;
+                //webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
+
+                // Load the HTML player
+                await LoadHtmlPlayer();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error initializing WebView2: {ex.Message}");
+            }
         }
 
-        private void VideoView_MouseMove(object sender, MouseEventArgs e)
+        private async Task LoadHtmlPlayer()
         {
-            Point currentPosition = e.GetPosition(VideoView);
+            string htmlContent = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <title>HLS Player</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: black;
+            font-family: Arial, sans-serif;
+        }
+        #videoContainer {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #video {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .error {
+            color: red;
+        }
+        .loading {
+            color: yellow;
+        }
+        .ready {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <div id='videoContainer'>
+        <video id='video' controls autoplay muted>
+            Your browser does not support the video tag.
+        </video>
+    </div>
 
-            // Only process substantial mouse movements to prevent tiny movements from constantly resetting
-            if (Math.Abs(currentPosition.X - _lastCursorPosition.X) > 5 ||
-                Math.Abs(currentPosition.Y - _lastCursorPosition.Y) > 5)
+    <script src='https://cdn.jsdelivr.net/npm/hls.js@latest'></script>
+    <script>
+        const video = document.getElementById('video');
+        const status = document.getElementById('status');
+        let hls = null;
+
+        function loadStream(url) {
+            if (!url) {
+                return;
+            }
+
+            // Check if this is a UHD stream
+            const isUHD = url.toLowerCase().includes('uhd') || url.toLowerCase().includes('4k');
+            if (isUHD) {
+                console.warn('UHD stream detected:', url);
+            }
+
+            // Check if HLS is supported
+            if (Hls.isSupported()) {
+                // Destroy existing HLS instance
+                if (hls) {
+                    hls.destroy();
+                }
+
+                hls = new Hls({
+                    debug: true,  // Enable debug for troubleshooting
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backBufferLength: 90
+                });
+
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                
+                hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+                  video.muted = false;
+                  video.volume = 1; // Set volume right after attaching
+                });
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    console.log('=== MANIFEST PARSED ===');
+                    console.log('Total levels:', hls.levels.length);
+                    console.log('Audio tracks:', hls.audioTracks.length);
+                    console.log('Subtitle tracks:', hls.subtitleTracks ? hls.subtitleTracks.length : 0);
+                    
+                    hls.levels.forEach((level, index) => {
+                        console.log(`Level ${index}:`, {
+                            width: level.width,
+                            height: level.height,
+                            bitrate: level.bitrate,
+                            videoCodec: level.videoCodec,
+                            audioCodec: level.audioCodec,
+                            fps: level.attrs ? level.attrs['FRAME-RATE'] : 'unknown',
+                            url: level.url
+                        });
+                        
+                        // Check for UHD resolution
+                        if (level.height >= 2160) {
+                            console.warn(`UHD/4K level detected: ${level.width}x${level.height}`);
+                        }
+                        
+                        // Check for unsupported codecs
+                        if (level.videoCodec && (level.videoCodec.includes('hev1') || level.videoCodec.includes('hvc1'))) {
+                            console.warn('H.265/HEVC codec detected - not supported in most browsers');
+                        }
+                    });
+                    
+                    // Check if we have any video levels
+                    const hasVideo = hls.levels.some(level => level.videoCodec);
+                    const hasAudio = hls.audioTracks.length > 0 || hls.levels.some(level => level.audioCodec);
+                    
+                    console.log('Stream analysis:', {
+                        hasVideo: hasVideo,
+                        hasAudio: hasAudio,
+                        currentLevel: hls.currentLevel,
+                        startLevel: hls.startLevel
+                    });
+                   
+                    
+                    video.play().catch(e => {
+                        console.error('Play failed:', e);
+                    });
+                });
+
+                // Add more detailed event logging
+                hls.on(Hls.Events.LEVEL_SWITCHED, function(event, data) {
+                    console.log('Level switched to:', data.level, hls.levels[data.level]);
+
+                });
+
+                hls.on(Hls.Events.FRAG_LOADED, function(event, data) {
+                    console.log('Fragment loaded:', data.frag.type, data.frag.level);
+                });
+
+                hls.on(Hls.Events.BUFFER_APPENDED, function(event, data) {
+                    console.log('Buffer appended:', data.type, 'TimeRanges:', data.timeRanges);
+                });
+
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    console.error('HLS Error Details:', {
+                        type: data.type,
+                        details: data.details,
+                        fatal: data.fatal,
+                        reason: data.reason,
+                        level: data.level,
+                        frag: data.frag,
+                        response: data.response
+                    });
+                    
+                    let errorMsg = 'Error: ' + data.type + ' - ' + data.details;
+                    
+                    if (data.fatal) {
+                        errorMsg += ' (FATAL)';
+                        
+                        // UHD-specific recovery strategies
+                        switch(data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.log('Network error - attempting recovery...');
+                                setTimeout(() => hls.startLoad(), 3000); // Wait longer for UHD
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log('Media error - attempting recovery...');
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                // For UHD, try one more time with different settings
+                                if (isUHD && !window.uhdRetryAttempted) {
+                                    console.log('UHD stream failed, trying with reduced settings...');
+                                    window.uhdRetryAttempted = true;
+                                    
+                                    // Destroy and recreate with even more conservative settings
+                                    hls.destroy();
+                                    setTimeout(() => {
+                                        loadStreamWithReducedSettings(url);
+                                    }, 2000);
+                                } else {
+                                    console.log('Cannot recover from error');
+                                }
+                                break;
+                        }
+                    }
+                    
+                });
+
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Native HLS support (Safari, etc.)
+                video.src = url;
+            } else {
+            }
+        }
+
+        // Expose functions to C#
+        window.chrome.webview.hostObjects.sync.player = {
+            loadStream: loadStream
+        };
+
+        // Video event listeners with detailed logging
+        video.addEventListener('loadstart', () => {
+            console.log('Video loadstart');
+            updateStatus('Loading...', 'loading');
+        });
+        video.addEventListener('loadedmetadata', () => {
+            console.log('=== VIDEO METADATA ===');
+            console.log('Duration:', video.duration);
+            console.log('Video dimensions:', video.videoWidth + 'x' + video.videoHeight);
+            console.log('Ready state:', video.readyState);
+            console.log('Has video tracks:', video.videoWidth > 0);
+            console.log('Has audio tracks:', video.duration > 0);
+            
+        });
+        video.addEventListener('canplay', () => {
+            console.log('=== CAN PLAY EVENT ===');
+            console.log('Ready state:', video.readyState);
+            console.log('Video dimensions:', video.videoWidth + 'x' + video.videoHeight);
+            console.log('Current time:', video.currentTime);
+            console.log('Buffered ranges:', video.buffered.length);
+            
+            // Force a frame update check
+            setTimeout(() => {
+                console.log('POST-CANPLAY CHECK:');
+                console.log('Video rendering:', video.videoWidth > 0 ? 'YES' : 'NO');
+                console.log('Current time:', video.currentTime);
+                console.log('Paused:', video.paused);
+            }, 1000);
+            
+        });
+        video.addEventListener('playing', () => {
+            console.log('Video playing');
+
+        });
+        video.addEventListener('pause', () => {
+            console.log('Video paused');
+        });
+        video.addEventListener('ended', () => {
+            console.log('Video ended');
+        });
+        video.addEventListener('error', (e) => {
+            console.error('Video error:', e.target.error);
+            if (e.target.error) {
+                console.error('Error code:', e.target.error.code, 'Message:', e.target.error.message);
+            }
+        });
+        video.addEventListener('waiting', () => {
+            console.log('Video waiting/buffering');
+        });
+        video.addEventListener('stalled', () => {
+            console.log('Video stalled');
+        });
+
+        // Check video rendering with more details
+        setInterval(() => {
+            if (video.currentTime > 0 && !video.paused) {
+                const hasVideo = video.videoWidth > 0 && video.videoHeight > 0;
+                const hasAudio = video.duration > 0;
+                const bufferedEnd = video.buffered.length > 0 ? video.buffered.end(0) : 0;
+                
+                console.log('=== PLAYBACK STATUS ===');
+                console.log('Time:', video.currentTime.toFixed(2) + 's');
+                console.log('Video dimensions:', video.videoWidth + 'x' + video.videoHeight);
+                console.log('Ready state:', video.readyState);
+                console.log('Network state:', video.networkState);
+                console.log('Buffered:', bufferedEnd.toFixed(2) + 's');
+                console.log('Paused:', video.paused);
+                console.log('Ended:', video.ended);
+                console.log('Current src:', video.currentSrc.substring(0, 100) + '...');
+            }
+        }, 5000);
+
+    </script>
+</body>
+</html>";
+
+            //webView.NavigateToString(htmlContent);
+        }
+        private bool _isPlayerReady = false;
+        private async void WebView_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
+        {
+            if (e.IsSuccess)
             {
-                _lastCursorPosition = currentPosition;
+                _isPlayerReady = true;
 
-                // Show cursor
-                ShowCursor();
-
-                // Reset the timer
-                _cursorTimer.Stop();
-                _cursorTimer.Start();
+                // Add host object for JavaScript communication
+               // webView.CoreWebView2.AddHostObjectToScript("player", new PlayerController());
             }
         }
 
@@ -138,22 +405,9 @@ namespace EPGVirtualization
                 Mouse.OverrideCursor = null;
 
                 // Show video controls if they should be visible
-                controlPanel.ShowWithAnimation();
+                //controlPanel.ShowWithAnimation();
             }
         }
-
-        private void HideCursor()
-        {
-            if (_isCursorVisible && _isFullScreen)
-            {
-                _isCursorVisible = false;
-                Mouse.OverrideCursor = Cursors.None;
-
-                // Hide video controls
-                controlPanel.HideWithAnimation();
-            }
-        }
-
         private void MainWindow_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Escape && _isFullScreen)
@@ -164,127 +418,14 @@ namespace EPGVirtualization
             {
                 ToggleFullScreen();
             }
-            else
-            {
-                // Any key press should show the cursor and controls
-                ShowCursor();
-                _cursorTimer.Stop();
-                _cursorTimer.Start();
-            }
         }
-
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            // Save original layout parameters
-            SaveOriginalLayoutParameters();
 
-            // Set initial size for the VideoAspectGrid for correct aspect ratio
-            VideoAspectGrid.Width = 1600;
-            VideoAspectGrid.Height = 900;
-
-            // Create an aspect ratio enforcer for the video view container
-            // This will dynamically adjust the size while maintaining the 16:9 ratio
-            _videoAspectRatioEnforcer = new AspectRatioEnforcer(VideoAspectGrid, 16.0 / 9.0);
-
-            // Respond to size changes in the container
-            VideoContainer.SizeChanged += VideoContainer_SizeChanged;
         }
-
-        private void VideoContainer_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            // Only update when size changes significantly to avoid excessive layout calculations
-            if (Math.Abs(e.PreviousSize.Width - e.NewSize.Width) > 5 ||
-                Math.Abs(e.PreviousSize.Height - e.NewSize.Height) > 5)
-            {
-                // Will be handled by the AspectRatioEnforcer
-                VideoAspectGrid.InvalidateMeasure();
-            }
-        }
-
-        private void SaveOriginalLayoutParameters()
-        {
-            // Save original grid positions
-            _originalEpgRow = Grid.GetRow(EPGContainer);
-            _originalEpgRowSpan = Grid.GetRowSpan(EPGContainer);
-            _originalVideoRow = Grid.GetRow(VideoContainer);
-            _originalVideoRowSpan = Grid.GetRowSpan(VideoContainer);
-            _originalVideoColumn = Grid.GetColumn(VideoContainer);
-            _originalVideoColumnSpan = Grid.GetColumnSpan(VideoContainer);
-        }
-
         private void MainWindow_StateChanged(object sender, EventArgs e)
         {
-            // When maximizing or restoring, handle the transition smoothly
-            if (this.WindowState == WindowState.Maximized || this.WindowState == WindowState.Normal)
-            {
-                _isResizing = true;
-
-                // Temporarily hide control panel during transition
-                if (controlPanel != null)
-                {
-                    // Store visibility state
-                    var controlVisibility = controlPanel.Visibility;
-
-                    // Hide during transition
-                    controlPanel.Visibility = Visibility.Collapsed;
-
-                    // Restore after animation completes
-                    var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-                    timer.Tick += (s, args) =>
-                    {
-                        controlPanel.Visibility = controlVisibility;
-                        _isResizing = false;
-                        timer.Stop();
-
-                        // Ensure the aspect ratio is maintained
-                        if (_videoAspectRatioEnforcer != null)
-                        {
-                            VideoAspectGrid.InvalidateMeasure();
-                        }
-                    };
-                    timer.Start();
-                }
-            }
         }
-
-        private void SetupControlPanel()
-        {
-            // Play/Pause
-            controlPanel.PlayPauseClicked += (s, e) => {
-                if (_mediaPlayer.IsPlaying)
-                    _mediaPlayer.Pause();
-                else
-                    _mediaPlayer.Play();
-            };
-
-            // Volume
-            controlPanel.VolumeChanged += (s, volume) => {
-                _mediaPlayer.Volume = (int)volume;
-            };
-
-            controlPanel.MuteToggleClicked += (s, e) => {
-                _mediaPlayer.Mute = !_mediaPlayer.Mute;
-            };
-
-            // Fullscreen
-            controlPanel.FullScreenClicked += (s, e) => {
-                ToggleFullScreen();
-            };
-
-            // Playback speed
-            controlPanel.PlaybackSpeedChanged += (s, speed) => {
-                _mediaPlayer.SetRate((float)speed);
-            };
-
-            // Initialize control panel state
-            controlPanel.IsPlaying = false;
-            controlPanel.IsMuted = false;
-            controlPanel.VolumeLevel = 75; // Default volume
-
-            // Enable auto-hide for controls
-            controlPanel.AutoHide = true;
-        }
-
         private void ToggleFullScreen()
         {
             _isFullScreen = !_isFullScreen;
@@ -307,8 +448,6 @@ namespace EPGVirtualization
                 // Remove border from video container in fullscreen mode
                 VideoContainer.BorderThickness = new Thickness(0);
 
-                // Start cursor hide timer
-                _cursorTimer.Start();
             }
             else
             {
@@ -328,61 +467,15 @@ namespace EPGVirtualization
                 // Restore the border
                 VideoContainer.BorderThickness = new Thickness(.6);
 
-                // Stop cursor hide timer and ensure cursor is visible
-                _cursorTimer.Stop();
                 ShowCursor();
             }
 
             // Update layout to reflect changes
             MainGrid.UpdateLayout();
         }
-
-        private void UpdateTimer_Tick(object sender, EventArgs e)
-        {
-            // Only update if we have media
-            if (_mediaPlayer.Media != null)
-            {
-                // Update position
-                if (_selectedProgram != null)
-                    controlPanel.UpdateTime(_selectedProgram.StartTime, _selectedProgram.StopTime);
-
-                // Update play state
-                controlPanel.IsPlaying = _mediaPlayer.IsPlaying;
-
-                // Update volume state
-                controlPanel.IsMuted = _mediaPlayer.Mute;
-                controlPanel.VolumeLevel = _mediaPlayer.Volume;
-            }
-        }
-
-        private void LoadMedia(string mediaPath)
-        {
-            // Create a new Media instance
-            using (var media = new Media(_libVLC, new Uri(mediaPath)))
-            {
-                // Assign the media to the player
-                _mediaPlayer.Media = media;
-                _mediaPlayer.NetworkCaching = 30 * 1000; // Set network caching to 30 seconds
-                // Auto-play if desired
-                _mediaPlayer.Play();
-            }
-        }
-
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            // Reset cursor to make sure it's visible when closing
-            Mouse.OverrideCursor = null;
-
-            // Stop timers
-            _cursorTimer?.Stop();
-            _updateTimer?.Stop();
-
-            // Clean up resources to prevent memory leaks
-            _mediaPlayer.Stop();
-            _mediaPlayer.Dispose();
-            _libVLC.Dispose();
         }
-
         private async void InitializeAsync()
         {
             try
@@ -396,9 +489,6 @@ namespace EPGVirtualization
                 // Set the data for our EPG control
                 EPGControl.SetChannels(channels.ToList());
                 EPGControl.ScrollToCurrentTime();
-
-                // Log information to debug
-                Console.WriteLine($"Created {channels.Count} channels");
             }
             catch (Exception ex)
             {
@@ -407,8 +497,7 @@ namespace EPGVirtualization
                 EPGControl.SetChannels(GenerateSampleChannels());
             }
         }
-
-        private void EPGControl_ProgramSelected(object sender, ProgramInfo program)
+        private async void EPGControl_ProgramSelected(object sender, ProgramInfo program)
         {
             var channel = EPGControl.Channels.FirstOrDefault(c => c.TvgName == program.Channel);
             if (channel != null)
@@ -420,10 +509,31 @@ namespace EPGVirtualization
                     // Now set the IsSelected property
                     programItem.IsSelected = true;
                     _selectedProgram = programItem;
-                    controlPanel.UpdateTime(_selectedProgram.StartTime, _selectedProgram.StopTime);
-                    LoadMedia(channel.TvgStreamLink.ToString());
+
+                    try
+                    {
+                        // URL to your .ts stream;
+                        await media.Open(channel.TvgStreamLink);
+                        await media.Play();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error: {ex.Message}");
+                    }
+                   
+                    
+                   //await webView.CoreWebView2.ExecuteScriptAsync($"loadStream('{channel.TvgStreamLink}')");
                 }
             }
+        }
+        private void Media_MediaFailed(object sender, Unosquare.FFME.Common.MediaFailedEventArgs e)
+        {
+            MessageBox.Show($"Media Failed:\n{e.ErrorException.Message}", "Playback Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        private void Media_MessageLogged(object sender, Unosquare.FFME.Common.MediaLogMessageEventArgs e)
+        {
+            Console.WriteLine($"[{e.MessageType}] {e.Message}");
         }
 
         private List<ChannelInfo> GenerateSampleChannels()
@@ -472,6 +582,30 @@ namespace EPGVirtualization
             }
 
             return channels;
+        }
+        private void MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+
+            //EPGRow.Height = new GridLength(0, GridUnitType.Star);
+        }
+        private void webView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e)
+        {
+            if (e.IsSuccess)
+            {
+                _isPlayerReady = true;
+
+                // Add host object for JavaScript communication
+                //webView.CoreWebView2.AddHostObjectToScript("player", new PlayerController());
+            }
+        }
+    }
+    [System.Runtime.InteropServices.ComVisible(true)]
+    public class PlayerController
+    {
+        public void OnVideoEvent(string eventType, string data)
+        {
+            // Handle video events from JavaScript
+            System.Diagnostics.Debug.WriteLine($"Video event: {eventType} - {data}");
         }
     }
 }

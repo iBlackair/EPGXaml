@@ -1,18 +1,10 @@
 ﻿using EPGVirtualization.Controls;
 using EPGVirtualization.Models;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Globalization;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
 namespace EPGVirtualization
@@ -131,9 +123,7 @@ namespace EPGVirtualization
         #endregion
 
         #region Events
-
         public event EventHandler<ProgramInfo> ProgramSelected;
-
         #endregion
 
         #region Template parts
@@ -151,6 +141,7 @@ namespace EPGVirtualization
         private Point _lastDragPosition;
         private bool _isDragging = false;
         private ProgramInfo _selectedProgram;
+
 
         static EPGCanvas()
         {
